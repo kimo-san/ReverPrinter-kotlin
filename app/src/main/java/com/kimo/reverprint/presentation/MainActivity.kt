@@ -15,7 +15,9 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -79,6 +81,8 @@ fun Greeting(
         Column(
             Modifier
                 .padding(it)
+                .fillMaxSize()
+                .safeContentPadding()
                 .verticalScroll(rememberScrollState())
         ) {
 
@@ -86,7 +90,7 @@ fun Greeting(
                 if (permissionLauncher.allPermissionsGranted) viewModel.findAndConnect()
                 else permissionLauncher.launchMultiplePermissionRequest()
             }) {
-                Text("Request perms or connect to printer")
+                Text("Connect to the printer")
             }
 
             Text(

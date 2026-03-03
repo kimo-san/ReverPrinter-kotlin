@@ -7,12 +7,12 @@ import com.kimo.reverprint.data.bluetooth.BleCharacteristic
 import com.kimo.reverprint.data.bluetooth.BluetoothController
 import com.kimo.reverprint.data.bluetooth.BluetoothDevice
 import com.kimo.reverprint.data.imageProcessing.BitmapProcessor
-import com.kimo.reverprint.data.imageProcessing.argb.ArgbBitmapProcessor
 import com.kimo.reverprint.data.tinyprint.TinyprintPrinterBean.Companion.supportedPrinters
 import com.kimo.reverprint.domain.PrintMode
 import com.kimo.reverprint.domain.Printer
 import com.kimo.reverprint.domain.ThermalPrinter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -77,21 +78,17 @@ class TinyprintPrinter(
         val printer = pairedToPrinter ?: error("Not connected to printer")
         val previews = mutableMapOf<PrintMode, Bitmap>()
 
-        previews[PrintMode.BPP1] = bitmapProcessor.process(imageBitmap) {
-
-            //resize(printer.printSize)
-            depth(4)
-            saturation(0f)
-            // dither()
+        coroutineScope {
+            launch {
+                previews[PrintMode.BPP1] = bitmapProcessor.process(imageBitmap) {
+                    resize(printer.printSize)
+//                    saturation(0.5f)
+//                    depth(4)
+//                    dither()
+                }
+            }
         }
 
-        if (printer.isGrayPrint)
-            previews[PrintMode.BPP4] = bitmapProcessor.process(imageBitmap) {
-                // resize(printer.printSize)
-                // saturation(0f)
-                // depth(16)
-                // dither()
-            }
 
         Printer.PrintPreviews(previews)
     }

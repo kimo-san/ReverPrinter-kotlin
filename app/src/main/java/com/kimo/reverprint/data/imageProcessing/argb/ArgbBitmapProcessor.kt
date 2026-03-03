@@ -10,7 +10,6 @@ import com.kimo.reverprint.data.imageProcessing.argb.ArgbColor.Companion.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
-import kotlin.math.min
 
 class ArgbBitmapProcessor : BitmapProcessor {
 
@@ -41,18 +40,17 @@ class ArgbBitmapProcessor : BitmapProcessor {
     // FIXME
     override suspend fun resize(width: Int): Unit = withContext(Dispatchers.Default) {
 
-        val (newWidth, newHeight) = width to (
-                pixels.height * width / pixels.width
-                ).coerceAtLeast(1)
+        val (newWidth, newHeight) = width to (pixels.height * width / pixels.width).coerceAtLeast(1)
 
         val scaled = Pixels(IntArray(newWidth * newHeight), newWidth, newHeight)
-        val scaleY = pixels.height.toFloat() / newHeight
-        val scaleX = pixels.width.toFloat() / newWidth
 
+//        val scaleY = pixels.height.toFloat() / newHeight
+//        val scaleX = pixels.width.toFloat() / newWidth
         scaled.forEach { p, x, y ->
-            val x = (x * scaleX).toInt().coerceIn(0, pixels.width - 1)
-            val y = (y * scaleY).toInt().coerceIn(0, pixels.height - 1)
-            p[x, y] = pixels[x, y]
+//            val x = (x * scaleX).toInt().coerceIn(0, pixels.width - 1)
+//            val y = (y * scaleY).toInt().coerceIn(0, pixels.height - 1)
+//            p[x, y] = pixels[x, y]
+            p[x, y] = ArgbColor.COLOR_DEPTH.let { ArgbColor(it-1, 0, it-1, it-1) }.int
         }
 
         pixels = scaled
@@ -114,11 +112,11 @@ class ArgbBitmapProcessor : BitmapProcessor {
         }
 
         val inv = 1f - s
-        val matrix = CoefficientMatrix(4).also {
+        val matrix = CoefficientMatrix(ArgbColor.CHANNELS).also {
             it[R] = floatArrayOf(lum(R) * inv + s, lum(G) * inv, lum(B) * inv, 0f)
             it[G] = floatArrayOf(lum(R) * inv, lum(G) * inv + s, lum(B) * inv, 0f)
             it[B] = floatArrayOf(lum(R) * inv, lum(G) * inv, lum(B) * inv + s, 0f)
-            it[A] = floatArrayOf(lum(R) * inv, lum(G) * inv, lum(B) * inv + s, 0f)
+            it[A] = floatArrayOf(0f,           0f,               0f,           1f)
         }
 
         pixels.forEach { p, x, y ->
@@ -134,32 +132,6 @@ class ArgbBitmapProcessor : BitmapProcessor {
             repeat(width) { x ->
                 block(this, x, y)
             }
-        }
-    }
-
-    class Pixels(
-        val arr: IntArray,
-        val width: Int,
-        val height: Int
-    ) {
-
-        constructor(bitmap: Bitmap) : this(
-            width = bitmap.width,
-            height = bitmap.height,
-            arr = IntArray(bitmap.width * bitmap.height).also {
-                bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            }
-        )
-
-        private val maxIndex = width * height - 1
-        fun getIndexForPixel(x: Int, y: Int) = min(y * height + min(x, width - 1), maxIndex)
-
-        operator fun get(x: Int, y: Int): Int {
-            return arr[getIndexForPixel(x, y)]
-        }
-
-        operator fun set(x: Int, y: Int, value: Int) {
-            arr[getIndexForPixel(x, y)] = value
         }
     }
 }

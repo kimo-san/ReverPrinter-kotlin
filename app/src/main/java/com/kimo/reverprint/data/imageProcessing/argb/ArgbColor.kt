@@ -1,7 +1,6 @@
 package com.kimo.reverprint.data.imageProcessing.argb
 
 import android.graphics.Color
-import com.kimo.reverprint.data.imageProcessing.argb.CoefficientMatrix
 import kotlin.math.roundToInt
 
 class ArgbColor(

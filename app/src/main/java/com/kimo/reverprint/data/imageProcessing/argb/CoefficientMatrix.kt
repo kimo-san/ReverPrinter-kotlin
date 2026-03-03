@@ -14,8 +14,9 @@ package com.kimo.reverprint.data.imageProcessing.argb
  * [source](https://kazzkiq.github.io/svg-color-filter/).
  *
  */
-class CoefficientMatrix(val colorChannels: Int = 4) {
+class CoefficientMatrix(val colorChannels: Int) {
 
+    private val floatArray: FloatArray = initializeNormalMatrix()
 
     operator fun get(channel: Int, coefficientChannel: Int): Float =
         floatArray[channel * colorChannels + coefficientChannel]
@@ -24,9 +25,9 @@ class CoefficientMatrix(val colorChannels: Int = 4) {
         coefficients.copyInto(floatArray, channel * colorChannels)
     }
 
+
     /**
-     *
-     *  Initialize normal matrix without any filter.
+     *  Initialize color matrix without any filters.
      *
      *  The example of the output matrix:
      *  ```
@@ -38,7 +39,7 @@ class CoefficientMatrix(val colorChannels: Int = 4) {
      *    A           [0 0 0 1]
      *  ```
      */
-    private val floatArray = FloatArray(colorChannels * colorChannels) {
+    private fun initializeNormalMatrix(): FloatArray = FloatArray(colorChannels * colorChannels) {
         val currentBlockIndex = it / colorChannels
         if (it % colorChannels == currentBlockIndex) 1f
         else 0f
