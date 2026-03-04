@@ -1,4 +1,4 @@
-package com.kimo.reverprint.data.imageProcessing.argb
+package com.kimo.reverprint.data.bitmaps
 
 import android.graphics.Bitmap
 import kotlin.math.min
@@ -8,6 +8,8 @@ class Pixels(
     val width: Int,
     val height: Int
 ) {
+
+    fun copy() = Pixels(arr.copyOf(), width, height)
 
     constructor(bitmap: Bitmap) : this(
         width = bitmap.width,

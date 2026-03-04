@@ -1,9 +1,6 @@
 package com.kimo.reverprint.di
 
 import android.app.Application
-import androidx.compose.ui.graphics.ImageBitmap
-import com.kimo.reverprint.data.imageProcessing.BitmapProcessor
-import com.kimo.reverprint.data.imageProcessing.argb.ArgbBitmapProcessor
 import com.kimo.reverprint.data.tinyprint.TinyprintPrinter
 import com.kimo.reverprint.domain.Printer
 import com.kimo.reverprint.presentation.MainViewModel
@@ -14,8 +11,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val koinModule = module {
-    single<BitmapProcessor> { ArgbBitmapProcessor() }
-    single<Printer> { TinyprintPrinter(get(), get()) }
+    single<Printer> { TinyprintPrinter(get()) }
     viewModel<MainViewModel> { MainViewModel(get()) }
 }
 

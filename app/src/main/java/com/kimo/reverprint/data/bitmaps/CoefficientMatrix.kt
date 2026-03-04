@@ -1,4 +1,4 @@
-package com.kimo.reverprint.data.imageProcessing.argb
+package com.kimo.reverprint.data.bitmaps
 
 /**
  *

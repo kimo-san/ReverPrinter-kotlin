@@ -14,7 +14,9 @@ interface Printer {
     suspend fun generatePreviews(imageBitmap: Bitmap): PrintPreviews
     suspend fun print(imagePreview: PrintPreviews, mode: PrintMode)
 
-    data class PrintPreviews(private val availableModes: Map<PrintMode, Bitmap>) {
+    abstract class PrintPreviews(
+        private val availableModes: Map<PrintMode, Bitmap>
+    ) {
         operator fun get(mode: PrintMode) = availableModes[mode]
     }
 }
