@@ -1,72 +1,114 @@
 package com.kimo.reverprint.data.bitmaps
 
-open class Argb(
-    override val channelDepth: Int
-): ColorModel {
+object Argb: ColorModel {
 
+    override val channelDepth: Int = 256
     override val channelCount: Int = 4
-    companion object : Argb(DEFAULT_CHANNEL_DEPTH) {
-        const val A = 0
-        const val R = 1
-        const val G = 2
-        const val B = 3
-    }
+    const val A = 0
+    const val R = 1
+    const val G = 2
+    const val B = 3
 
-    override fun luw(channel: Int): Float =
-        when(channel) {
-            R -> 0.2126f
-            G -> 0.7152f
-            B -> 0.0722f
-            else -> 1f
-        }
-
-    fun colorOf(
-        a: Int, r: Int,
-        g: Int, b: Int
-    ): ColorOfModel = ArgbColor(a, r, g, b)
+    fun colorOf(a: Int, r: Int, g: Int, b: Int): ColorOfModel = ArgbColor(a, r, g, b)
 
     override fun colorOf(intColor: Int): ColorOfModel = ArgbColor(intColor)
 
-    private class ArgbColor(
-        a: Int, r: Int,
-        g: Int, b: Int
-    ): ColorOfModel(this) {
+    @JvmInline
+    private value class ArgbColor(val intColor: Int): ColorOfModel {
 
         constructor(
-            intColor: Int
-        ): this(
-            a = android.graphics.Color.alpha(intColor),
-            r = android.graphics.Color.red(intColor),
-            g = android.graphics.Color.green(intColor),
-            b = android.graphics.Color.blue(intColor)
-        )
+            a: Int, r: Int,
+            g: Int, b: Int,
+        ): this(android.graphics.Color.argb(a, r, g, b))
 
-        override val channelValues: IntArray = intArrayOf(a, r, g, b)
-        override val int: Int
-            get() = android.graphics.Color.argb(
-                channelValues[A],
-                channelValues[R],
-                channelValues[G],
-                channelValues[B],
-            )
+        override val model: ColorModel get () = Argb
+        override fun get(channel: Int): Int = when (channel) {
+            A -> android.graphics.Color.alpha(intColor)
+            R -> android.graphics.Color.red(intColor)
+            G -> android.graphics.Color.green(intColor)
+            B -> android.graphics.Color.blue(intColor)
+            else -> error("Channel $channel is not present for the model $model.")
+        }
+        override val int: Int get() = intColor
+
+        override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
+        override fun lum(): Float = android.graphics.Color.luminance(int)
+
+        override fun remapped(
+            block: ColorOfModel.Remappable<Int, Int>.(Int, Int) -> Unit
+        ): ColorOfModel {
+            val remap = IntArray(model.channelCount) { get(it) }
+            val remappable = Remappable { key, newValue -> remap[key] = newValue }
+            repeat(model.channelCount) { remappable.block(it, get(it)) }
+            return ArgbColor(remap[A], remap[R], remap[G], remap[B])
+        }
     }
 }
 
-open class Greyscale(
-    override val channelDepth: Int
-): ColorModel {
+object Grey4bpp: ColorModel {
 
+    override val channelDepth: Int = 16
     override val channelCount: Int = 1
-    companion object : Greyscale(DEFAULT_CHANNEL_DEPTH) {
-        const val W = 0
-    }
-    override fun luw(channel: Int): Float = 1f
+    const val W = 0
 
     override fun colorOf(
         intColor: Int
-    ): ColorOfModel = object : ColorOfModel(this) {
-        override val channelValues: IntArray = intArrayOf(intColor)
-        override val int: Int
-            get() = channelValues[W]
+    ): ColorOfModel = GrayscaleColor(intColor)
+
+
+    @JvmInline
+    private value class GrayscaleColor(val intValue: Int): ColorOfModel {
+
+        override val model: ColorModel get() = Grey4bpp
+        override fun get(channel: Int) = intValue
+        override val int: Int get() = intValue
+
+        override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
+        override fun lum(): Float = lum(W)
+        override fun remapped(
+            block: ColorOfModel.Remappable<Int, Int>.(Int, Int) -> Unit
+        ): ColorOfModel {
+            val remap = IntArray(model.channelCount) { get(it) }
+            val remappable = Remappable { key, newValue -> remap[key] = newValue }
+            repeat(model.channelCount) { remappable.block(it, get(it)) }
+            return GrayscaleColor(remap[W])
+        }
     }
 }
+
+object Monochrome: ColorModel {
+
+    override val channelDepth: Int = 1
+    override val channelCount: Int = 1
+    const val W = 0
+
+    override fun colorOf(
+        intColor: Int
+    ): ColorOfModel = MonochromeColor(intColor)
+
+    @JvmInline
+    private value class MonochromeColor(val intValue: Int): ColorOfModel {
+
+        override val model: ColorModel get() = Monochrome
+        override fun get(channel: Int) = intValue
+        override val int: Int get() = intValue
+
+        override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
+        override fun lum(): Float = lum(W)
+        override fun remapped(
+            block: ColorOfModel.Remappable<Int, Int>.(Int, Int) -> Unit
+        ): ColorOfModel {
+            val remap = IntArray(model.channelCount) { get(it) }
+            val remappable = Remappable { key, newValue -> remap[key] = newValue }
+            repeat(model.channelCount) { remappable.block(it, get(it)) }
+            return MonochromeColor(remap[W])
+        }
+    }
+}
+
+private fun Remappable(onRemap: (key: Int, newValue: Int) -> Unit) =
+    object : ColorOfModel.Remappable<Int, Int> {
+        override fun set(key: Int, newValue: Int) {
+            onRemap(key, newValue)
+        }
+    }

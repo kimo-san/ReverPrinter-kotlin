@@ -1,43 +1,38 @@
 package com.kimo.reverprint.data.bitmaps
 
 import android.graphics.Bitmap
+import androidx.compose.ui.util.fastRoundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlin.math.roundToInt
 import kotlin.properties.Delegates
 
 class BitmapProcessorImpl : BitmapProcessor {
 
     private var pixels: Pixels = Pixels(intArrayOf(0), 1, 1)
-    private var currentColorDepth = DEFAULT_CHANNEL_DEPTH
-    private var currentColorModel: ColorModel = Argb
+    private var currentColorModel by Delegates.notNull<ColorModel>()
+    private var settings: BitmapSettings? = null
 
-    override var depthProColorChannel = DEFAULT_CHANNEL_DEPTH
-    override var saturation = 1f
-    override var dither = false
-    override var width by Delegates.notNull<Int>()
-    override var colorModel: ColorModel = Argb
+    override fun setSettings(settings: BitmapSettings) {
+        this.settings = settings
+    }
 
     override fun setImage(bitmap: Bitmap) {
-        bitmap.copy(Bitmap.Config.ARGB_8888, true).apply {
-            pixels = Pixels(this)
-            this@BitmapProcessorImpl.width = width
-            recycle()
-        }
+        val bm = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        pixels = Pixels(bm)
+        currentColorModel = Argb
     }
 
     override suspend fun processPixels(): Pixels {
 
-        if (this.width != pixels.width)
-            resize(this.width, null)
-        if (saturation != 1f)
-            saturation(saturation)
-        if (depthProColorChannel != currentColorDepth)
-            depth(depthProColorChannel)
-        if (dither)
+        resize(settings?.width, settings?.height)
+        settings?.dither?.takeIf { it }?.let {
             dither()
-        if (colorModel != currentColorModel)
-            changeColorModel(colorModel)
+        }
+        settings?.colorModel?.let {
+            changeColorModel(it)
+        }
 
         return pixels.copy()
     }
@@ -45,51 +40,67 @@ class BitmapProcessorImpl : BitmapProcessor {
     suspend fun changeColorModel(newModel: ColorModel) = withContext(Dispatchers.Default) {
         when (newModel) {
 
-            is Greyscale -> {
-                when (currentColorModel) {
-                    is Greyscale -> {
-                        return@withContext
+            is Grey4bpp -> {
+                if (currentColorModel !is Grey4bpp)
+                    pixels.forEach { p, x, y ->
+                        val lum = currentColorModel.colorOf(p[x, y]).lum() *
+                                (newModel.channelDepth - 1)
+                        p[x, y] = newModel.colorOf(lum.roundToInt()).int
                     }
+            }
 
-                    else -> {
-                        pixels.forEach { p, x, y ->
-                            val argb = currentColorModel.colorOf(p[x, y]).lum()
-                            p[x, y] = Greyscale.colorOf(
-                                (argb * currentColorDepth).toInt()
-                            ).int
-                        }
-                    }
+            is Monochrome -> {
+                pixels.forEach { p, x, y ->
+                    val lum = currentColorModel.colorOf(p[x, y]).lum() *
+                            (newModel.channelDepth - 1)
+
+                    p[x, y] = newModel.colorOf(lum.fastRoundToInt()).int
                 }
             }
 
             is Argb -> {
                 when (currentColorModel) {
-                    is Greyscale -> {
+
+                    is Monochrome -> {
+
                         pixels.forEach { p, x, y ->
-                            val lum = Greyscale
-                                .colorOf(p[x, y])
-                                .lum(Greyscale.W)
-                                .times(currentColorDepth)
-                                .toInt()
-                            p[x, y] = Argb.colorOf(
-                                a = 0,
-                                r = (lum * Argb.luw(Argb.R)).toInt(),
-                                g = (lum * Argb.luw(Argb.G)).toInt(),
-                                b = (lum * Argb.luw(Argb.B)).toInt()
+                            val bwColor = currentColorModel.colorOf(p[x, y])[Monochrome.W] *
+                                    (newModel.channelDepth - 1)
+
+                            p[x, y] = newModel.colorOf(
+                                a = newModel.channelDepth - 1,
+                                r = bwColor,
+                                g = bwColor,
+                                b = bwColor
                             ).int
                         }
                     }
 
-                    is Argb -> {
-                        return@withContext
+                    is Grey4bpp -> {
+                        pixels.forEach { p, x, y ->
+
+                            val grayColor = (currentColorModel
+                                .colorOf(p[x, y])
+                                .lum() * (newModel.channelDepth - 1))
+                                .fastRoundToInt()
+
+                            p[x, y] = newModel.colorOf(
+                                a = newModel.channelDepth - 1,
+                                r = grayColor,
+                                g = grayColor,
+                                b = grayColor
+                            ).int
+                        }
                     }
 
+                    is Argb -> {  }
                     else -> error("Unsupported")
                 }
             }
 
             else -> error("Unsupported")
         }
+        currentColorModel = newModel
     }
 
     suspend fun resize(width: Int?, height: Int?): Unit = withContext(Dispatchers.Default) {
@@ -129,47 +140,32 @@ class BitmapProcessorImpl : BitmapProcessor {
 
     suspend fun dither(): Unit = withContext(Dispatchers.Default) {
 
-        fun findClosestColor(color: ColorOfModel): Int =
-            color.apply {
-                channelValues.forEachIndexed { i, it ->
-                    channelValues[i] = it / currentColorDepth * currentColorDepth
-                }
-            }.int
-
-        pixels.forEach { p, x, y ->
-            val oldPixel = p[x, y]
-            val newPixel = findClosestColor(currentColorModel.colorOf(oldPixel))
-            val error = oldPixel - newPixel
-            p[x, y] = newPixel
-            p[x + 1, y] += error * 7 / 16
-            p[x - 1, y + 1] += error * 3 / 16
-            p[x, y + 1] += error * 5 / 16
-            p[x + 1, y + 1] += error * 1 / 16
-        }
-    }
-
-    suspend fun depth(newDepth: Int): Unit = withContext(Dispatchers.Default) {
-        pixels.forEach { p, x, y ->
-            p[x, y] = currentColorModel.colorOf(p[x, y]).int
-        }
-        currentColorDepth = newDepth
-    }
-
-    suspend fun saturation(newSaturation: Float): Unit = withContext(Dispatchers.Default) {
-
-        val inverted = 1f - newSaturation
-        val matrix = CoefficientMatrix(currentColorModel.channelCount).also {
-            repeat(it.colorChannels) { i ->
-                val arr = FloatArray(it.colorChannels) { kch ->
-                    currentColorModel.luw(kch) * inverted
-                }
-                arr[i] += newSaturation
-                it[i] = arr
+        fun findClosestColor(color: ColorOfModel): ColorOfModel =
+            color.remapped { channel, value ->
+                val quantize = currentColorModel.channelDepth - 1f
+                set(channel, (value / quantize * quantize).fastRoundToInt())
             }
-        }
+
+        fun applyDifference(
+            color: ColorOfModel,
+            errors: IntArray,
+            factor: Float
+        ): ColorOfModel =
+            color.remapped { channel, newValue ->
+                set(channel, (color[channel] + errors[channel] * factor).roundToInt())
+            }
 
         pixels.forEach { p, x, y ->
-            p[x, y] = currentColorModel.colorOf(p[x, y]).applyMatrix(matrix).int
+
+            val oldPixel = currentColorModel.colorOf(p[x, y])
+            val newPixel = findClosestColor(currentColorModel.colorOf(p[x, y]))
+
+            val errorsOnChannels = IntArray(oldPixel.model.channelCount) { oldPixel[it] - newPixel[it] }
+            p[x    , y    ] = newPixel.int
+            p[x + 1, y    ] = applyDifference(currentColorModel.colorOf(p[x + 1, y]), errorsOnChannels, 7f / 16).int
+            p[x - 1, y + 1] = applyDifference(currentColorModel.colorOf(p[x - 1, y + 1]), errorsOnChannels, 3f / 16).int
+            p[x    , y + 1] = applyDifference(currentColorModel.colorOf(p[x, y + 1]), errorsOnChannels, 5f / 16).int
+            p[x + 1, y + 1] = applyDifference(currentColorModel.colorOf(p[x + 1, y + 1]), errorsOnChannels, 1f / 16).int
         }
     }
 

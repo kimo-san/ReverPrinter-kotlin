@@ -2,12 +2,14 @@ package com.kimo.reverprint.data.tinyprint
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.kimo.reverprint.data.bitmaps.Greyscale
+import com.kimo.reverprint.data.bitmaps.Grey4bpp
 import com.kimo.reverprint.data.bluetooth.AndroidBluetoothLeController
 import com.kimo.reverprint.data.bluetooth.BleCharacteristic
 import com.kimo.reverprint.data.bluetooth.BluetoothController
 import com.kimo.reverprint.data.bluetooth.BluetoothDevice
 import com.kimo.reverprint.data.bitmaps.Pixels
+import com.kimo.reverprint.data.bitmaps.BitmapSettings
+import com.kimo.reverprint.data.bitmaps.Monochrome
 import com.kimo.reverprint.data.bitmaps.convertViewableImage
 import com.kimo.reverprint.data.tinyprint.TinyprintPrinterBean.Companion.supportedPrinters
 import com.kimo.reverprint.domain.PrintMode
@@ -25,11 +27,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
+fun saveBitmapInternal(context: Context, bitmap: Bitmap, filename: String) {
+    val file = File(context.filesDir, filename)
+    FileOutputStream(file).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+}
+
+@Suppress("SpellCheckingInspection")
 class TinyprintPrinter(
     private val context: Context
-): Printer {
+) : Printer {
 
     override val connectedTo: MutableStateFlow<ThermalPrinter?> = MutableStateFlow(null)
     private var pairedToPrinter: TinyprintPrinterBean? = null
@@ -56,7 +68,8 @@ class TinyprintPrinter(
             .filterNotNull()
             .onEach { (modelName, tpModel, bleDevice) ->
 
-                send(ThermalPrinter(
+                send(
+                    ThermalPrinter(
                     name = modelName,
                     macAddress = bleDevice.address,
                     supportedModes = buildList {
@@ -73,48 +86,56 @@ class TinyprintPrinter(
         pairedToPrinter = supportedPrinters[device.name]
     }
 
-    override suspend fun generatePreviews(imageBitmap: Bitmap): Printer.PrintPreviews = withContext(Dispatchers.Default) {
+    override suspend fun generatePreviews(imageBitmap: Bitmap): Printer.PrintPreviews =
+        withContext(Dispatchers.Default) {
 
-        val printer = pairedToPrinter ?: error("Not connected to printer")
-        val previews = mutableMapOf<PrintMode, Bitmap>()
-        val printable = mutableMapOf<PrintMode, Pixels>()
+            val printer = pairedToPrinter ?: error("Not connected to printer")
+            val previews = mutableMapOf<PrintMode, Bitmap>()
+            val printable = mutableMapOf<PrintMode, Pixels>()
 
-        launch {
-            PrintMode.BPP1.apply {
-                val (p, d) = convertViewableImage(imageBitmap) {
-//                    width = printer.printSize
-//                    saturation = 0f // fixme : nothing is to see
-//                    depthProColorChannel = 8 // fixme : nothing changed
-//                    colorModel = Greyscale // fixme : nothing is to see
-//                    dither = true // cannot test
+            launch {
+                PrintMode.BPP1.apply {
+                    convertViewableImage(
+                        imageBitmap,
+                        BitmapSettings(
+                            width = printer.printSize,
+                            colorModel = Monochrome,
+                            dither = false
+                        )
+                    ).also { (view, print) ->
+                        previews[this] = view
+                        saveBitmapInternal(context, view, "Preview1.png")
+                        printable[this] = print
+                    }
                 }
-                previews[this] = p
-                printable[this] = d
             }
-        }
 
-        launch {
-            PrintMode.BPP4.apply {
-                val (p, d) = convertViewableImage(imageBitmap) {
-                    width = printer.printSize
-                    saturation = 0f
-                    dither = true
-                    depthProColorChannel = 16
-                    colorModel = Greyscale
+            launch {
+                PrintMode.BPP4.apply {
+                    convertViewableImage(
+                        imageBitmap,
+                        BitmapSettings(
+                            width = printer.printSize,
+                            colorModel = Grey4bpp,
+                            dither = true
+                        )
+                    ).also { (view, print) ->
+                        previews[this] = view
+                        saveBitmapInternal(context, view, "Preview2.png")
+                        printable[this] = print
+                    }
                 }
-                previews[this] = p
-                printable[this] = d
             }
+            joinAll()
+            TinyprintPreview(previews, printable)
         }
-
-        joinAll()
-        TinyPrintPreview(previews, printable)
-    }
 
     override suspend fun print(
         imagePreview: Printer.PrintPreviews,
         mode: PrintMode
     ) {
+        require(imagePreview is TinyprintPreview)
+        imagePreview.pixelArrays[mode]
         TODO()
     }
 
@@ -125,12 +146,12 @@ class TinyprintPrinter(
     }
 
     private fun ThermalPrinter.asBluetoothDevice() = BluetoothDevice(
-        name = null, // the name may not match the real device name
+        name = null,
         address = macAddress
     )
 
-    private class TinyPrintPreview(
+    private class TinyprintPreview(
         availableModes: Map<PrintMode, Bitmap>,
         val pixelArrays: Map<PrintMode, Pixels>,
-    ): Printer.PrintPreviews(availableModes)
+    ) : Printer.PrintPreviews(availableModes)
 }

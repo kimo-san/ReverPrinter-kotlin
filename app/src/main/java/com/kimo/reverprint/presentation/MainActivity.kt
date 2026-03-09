@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.rememberScrollState
@@ -35,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toFile
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -68,6 +70,10 @@ fun Greeting(
 ) {
 
     val permissionLauncher = rememberMultiplePermissionsState(bluetoothPermissions)
+    LaunchedEffect(Unit) {
+        if (permissionLauncher.allPermissionsGranted) viewModel.findAndConnect()
+        else permissionLauncher.launchMultiplePermissionRequest()
+    }
 
     Scaffold(
         topBar = {
@@ -85,13 +91,6 @@ fun Greeting(
                 .safeContentPadding()
                 .verticalScroll(rememberScrollState())
         ) {
-
-            Button(onClick = {
-                if (permissionLauncher.allPermissionsGranted) viewModel.findAndConnect()
-                else permissionLauncher.launchMultiplePermissionRequest()
-            }) {
-                Text("Connect to the printer")
-            }
 
             Text(
                 "Previews",
@@ -133,7 +132,19 @@ fun Greeting(
             previews?.let {
                 Text("1bpp:")
                 it[PrintMode.BPP1]?.let {
-                    Image(it.asImageBitmap(), null)
+                    Image(
+                        it.asImageBitmap(), null,
+                        Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
+                Text("4bpp:")
+                it[PrintMode.BPP4]?.let {
+                    Image(
+                        it.asImageBitmap(), null,
+                        Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.FillWidth
+                    )
                 }
             }
         }

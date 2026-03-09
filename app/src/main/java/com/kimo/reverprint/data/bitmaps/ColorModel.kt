@@ -1,64 +1,38 @@
 package com.kimo.reverprint.data.bitmaps
 
-import kotlin.math.roundToInt
-
-const val DEFAULT_CHANNEL_DEPTH = 256
-
 interface ColorModel {
 
     val channelCount: Int
     val channelDepth: Int
 
     /**
-     * Get concrete instance of color from int of this model
+     * Returns concrete instance of color from int of this model
      */
     fun colorOf(
         intColor: Int
     ): ColorOfModel
 
-    /**
-     * Returns luminance weight of channel
-     */
-    fun luw(channel: Int): Float
 }
 
-abstract class ColorOfModel(
+interface ColorOfModel {
+
     val model: ColorModel
-) {
-
-    val channelCount: Int get() = model.channelCount
-    val channelDepth: Int get() = model.channelDepth
-
-    open val channelValues: IntArray = IntArray(channelCount)
-    abstract val int: Int
-
+    val int: Int
+    operator fun get(channel: Int): Int
 
     /**
-     * Returns luminance of channel
+     * Returns luminance of the given channel
      */
-    fun lum(channel: Int): Float = channelValues[channel].toFloat() / channelDepth
+    fun lum(channel: Int): Float
 
     /**
-     * Returns average luminance of all channels
+     * Returns luminance of all the color
      */
-    fun lum(): Float = channelValues.average().toFloat() / channelCount / channelDepth
+    fun lum(): Float
 
-    fun applyMatrix(matrix: CoefficientMatrix): ColorOfModel {
-        val oldRgba = channelValues.copyOf()
-        for (channel in 0..<channelCount) {
-
-            var newChannelValue = 0f
-            for (coefficientChannel in 0..<channelCount) {
-                val k = matrix[channel, coefficientChannel]
-                val o = oldRgba[coefficientChannel]
-                newChannelValue += o * k
-            }
-
-            channelValues[channel] = newChannelValue
-                .roundToInt()
-                .coerceIn(0, channelDepth)
-        }
-        return this
+    fun remapped(block: Remappable<Int, Int>.(channel: Int, value: Int) -> Unit): ColorOfModel
+    fun interface Remappable<K, T> {
+        fun set(key: K, newValue: T)
     }
 }
 
