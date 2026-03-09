@@ -16,7 +16,5 @@ interface Printer {
 
     abstract class PrintPreviews(
         private val availableModes: Map<PrintMode, Bitmap>
-    ) {
-        operator fun get(mode: PrintMode) = availableModes[mode]
-    }
+    ) { operator fun get(mode: PrintMode) = availableModes[mode] }
 }

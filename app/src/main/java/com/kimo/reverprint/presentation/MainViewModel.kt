@@ -3,11 +3,9 @@ package com.kimo.reverprint.presentation
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kimo.reverprint.domain.PrintMode
 import com.kimo.reverprint.domain.Printer
-import com.kimo.reverprint.domain.ThermalPrinter
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -17,7 +15,7 @@ class MainViewModel(
 ): ViewModel() {
 
     var imagePreview = MutableStateFlow<Printer.PrintPreviews?>(null)
-    val currentPrinter get() = printer.connectedTo
+    val device get() = printer.connectedTo
 
     fun findAndConnect() = viewModelScope.launch {
         val device = printer.findAvailable().first()
@@ -26,6 +24,18 @@ class MainViewModel(
 
     fun setPreview(image: Bitmap) = viewModelScope.launch {
         imagePreview.update { printer.generatePreviews(image) }
+    }
+
+    fun print4bpp() = viewModelScope.launch {
+        imagePreview.value?.let {
+            printer.print(it, PrintMode.BPP4)
+        } ?: println("preview is not provided")
+    }
+
+    fun print1bpp() = viewModelScope.launch {
+        imagePreview.value?.let {
+            printer.print(it, PrintMode.BPP1)
+        }
     }
 
 }

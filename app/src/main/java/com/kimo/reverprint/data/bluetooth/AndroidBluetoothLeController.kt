@@ -69,39 +69,48 @@ class AndroidBluetoothLeController(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override suspend fun send(data: ByteArray) = suspendCancellableCoroutine { continuation ->
+    override suspend fun send(data: ByteArray) =
+        suspendCancellableCoroutine { continuation ->
 
-        deviceGatt ?: continuation.resumeWith(Result.failure(IllegalStateException("Device gatt not found")))
-        gattCallback ?: continuation.resumeWith(Result.failure(IllegalStateException("Gatt callback is not initialized")))
-        inputCharacteristic ?: continuation.resumeWith(Result.failure(IllegalStateException("UUID is not given.")))
-
-        val gatt = deviceGatt!!
-        val callback = gattCallback!!
-        inputCharacteristic!!
-
-        val characteristic = gatt.services.flatMap { it.characteristics }
-            .find { it.uuid == inputCharacteristic.uuid }.let {
-                if (it == null) {
-                    continuation.resumeWith(Result.failure(IllegalStateException("Characteristic not found")))
+            deviceGatt
+                ?: continuation.resumeWith(Result.failure(IllegalStateException("Device gatt not found"))).also {
                     return@suspendCancellableCoroutine
                 }
-                else it
+            gattCallback
+                ?: continuation.resumeWith(Result.failure(IllegalStateException("Gatt callback is not initialized"))).also {
+                    return@suspendCancellableCoroutine
+                }
+            inputCharacteristic
+                ?: continuation.resumeWith(Result.failure(IllegalStateException("UUID is not given."))).also {
+                    return@suspendCancellableCoroutine
+                }
+
+            val gatt = deviceGatt!!
+            val callback = gattCallback!!
+
+            val characteristic = gatt.services.flatMap { it.characteristics }
+                .find { it.uuid == inputCharacteristic.uuid }.let {
+                    if (it == null) {
+                        continuation.resumeWith(Result.failure(IllegalStateException("Characteristic not found")))
+                        return@suspendCancellableCoroutine
+                    } else it
+                }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeCharacteristic(
+                    characteristic,
+                    data,
+                    characteristic.writeType
+                ) == BluetoothStatusCodes.SUCCESS
+            } else {
+                gatt.writeCharacteristic(characteristic)
             }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeCharacteristic(
-                characteristic,
-                data,
-                characteristic.writeType
-            ) == BluetoothStatusCodes.SUCCESS
-        } else {
-            gatt.writeCharacteristic(characteristic)
+            callback.onWriteResult = {
+                if (continuation.isActive)
+                    continuation.resumeWith(it)
+            }
         }
-
-        callback.onWriteResult = {
-            continuation.resumeWith(Result.success(Unit))
-        }
-    }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private suspend fun BluetoothDevice.bluetoothGatt() =

@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -23,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toFile
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kimo.reverprint.domain.PrintMode
@@ -77,10 +76,15 @@ fun Greeting(
 
     Scaffold(
         topBar = {
-            val printer by viewModel.currentPrinter.collectAsState()
+            val printer by viewModel.device.collectAsState()
             TopAppBar(
                 title = { Text(printer?.name ?: "Not connected yet") }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton({ viewModel.print4bpp() }) {
+                Text("Print 4bpp")
+            }
         }
     ) { it -> it
 

@@ -16,6 +16,7 @@ import com.kimo.reverprint.domain.PrintMode
 import com.kimo.reverprint.domain.Printer
 import com.kimo.reverprint.domain.ThermalPrinter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
@@ -31,25 +32,25 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
 
-fun saveBitmapInternal(context: Context, bitmap: Bitmap, filename: String) {
+private fun saveBitmapDebug(context: Context, bitmap: Bitmap, filename: String) {
     val file = File(context.filesDir, filename)
     FileOutputStream(file).use { out ->
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
     }
 }
 
-@Suppress("SpellCheckingInspection")
 class TinyprintPrinter(
     private val context: Context
 ) : Printer {
 
     override val connectedTo: MutableStateFlow<ThermalPrinter?> = MutableStateFlow(null)
     private var pairedToPrinter: TinyprintPrinterBean? = null
+    private val protocol: TinyprintDeviceCommunicationProtocol = TinyprintDeviceCommunicationProtocolImpl()
     private val bluetoothController: BluetoothController by lazy {
         AndroidBluetoothLeController(
             context = context,
             inputCharacteristic = BleCharacteristic(
-                UUID.fromString("0000AE01-0000-1000-8000-00805F9B34FB")
+                "0000AE01-0000-1000-8000-00805F9B34FB".let(UUID::fromString)
             )
         )
     }
@@ -104,7 +105,7 @@ class TinyprintPrinter(
                         )
                     ).also { (view, print) ->
                         previews[this] = view
-                        saveBitmapInternal(context, view, "Preview1.png")
+                        saveBitmapDebug(context, view, "Preview-1bpp.png")
                         printable[this] = print
                     }
                 }
@@ -121,7 +122,7 @@ class TinyprintPrinter(
                         )
                     ).also { (view, print) ->
                         previews[this] = view
-                        saveBitmapInternal(context, view, "Preview2.png")
+                        saveBitmapDebug(context, view, "Preview-4bpp.png")
                         printable[this] = print
                     }
                 }
@@ -135,8 +136,48 @@ class TinyprintPrinter(
         mode: PrintMode
     ) {
         require(imagePreview is TinyprintPreview)
-        imagePreview.pixelArrays[mode]
-        TODO()
+        val bitmap = imagePreview.pixelArrays[mode]
+
+        when (mode) {
+
+            PrintMode.BPP1 -> {
+                require(bitmap?.model is Monochrome)
+                bluetoothController.send(
+                    protocol.setMode(TinyprintDeviceCommunicationProtocol.Mode.MONO_IMG)
+                )
+                bluetoothController.send(
+                    protocol.setQuality(TinyprintDeviceCommunicationProtocol.Quality.Five)
+                )
+
+                repeat(bitmap.height) { y ->
+                    bluetoothController.send(
+                        protocol.println1bpp(bitmap.getRow(y))
+                    )
+                    if (y % 20 == 0)
+                        delay(pairedToPrinter!!.imgPrintSpeed.toLong())
+                }
+            }
+
+            PrintMode.BPP4 -> {
+                require(bitmap?.model is Grey4bpp)
+                bluetoothController.send(
+                    protocol.setMode(TinyprintDeviceCommunicationProtocol.Mode.GREY_IMG)
+                )
+                bluetoothController.send(
+                    protocol.setQuality(TinyprintDeviceCommunicationProtocol.Quality.Five)
+                )
+
+                repeat(bitmap.height) { y ->
+                    bluetoothController.send(
+                        protocol.println4bpp(bitmap.getRow(y))
+                    )
+                    if (y % 20 == 0)
+                        delay(pairedToPrinter!!.grayImageSpeed.toLong())
+                }
+            }
+        }
+
+        bluetoothController.send(protocol.feedPaper(100))
     }
 
     override suspend fun disconnect() {

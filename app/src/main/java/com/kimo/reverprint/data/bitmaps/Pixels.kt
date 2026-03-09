@@ -6,17 +6,19 @@ import kotlin.math.min
 class Pixels(
     val arr: IntArray,
     val width: Int,
-    val height: Int
+    val height: Int,
+    var model: ColorModel
 ) {
 
-    fun copy() = Pixels(arr.copyOf(), width, height)
+    fun copy() = Pixels(arr.copyOf(), width, height, model)
 
     constructor(bitmap: Bitmap) : this(
-        width = bitmap.width,
-        height = bitmap.height,
         arr = IntArray(bitmap.width * bitmap.height).also {
             bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        }
+        },
+        width = bitmap.width,
+        height = bitmap.height,
+        model = Argb
     )
 
     private val maxIndex = width * height - 1
@@ -32,4 +34,6 @@ class Pixels(
     operator fun set(x: Int, y: Int, value: Int) {
         arr[getIndexForPixel(x, y)] = value
     }
+
+    fun getRow(y: Int) = IntArray(width) { x -> get(x, y) }
 }

@@ -1,6 +1,7 @@
 package com.kimo.reverprint.data.bitmaps
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.isTraceInProgress
 import androidx.compose.ui.util.fastRoundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,7 +11,7 @@ import kotlin.properties.Delegates
 
 class BitmapProcessorImpl : BitmapProcessor {
 
-    private var pixels: Pixels = Pixels(intArrayOf(0), 1, 1)
+    private var pixels: Pixels = Pixels(intArrayOf(0), 1, 1, Monochrome)
     private var currentColorModel by Delegates.notNull<ColorModel>()
     private var settings: BitmapSettings? = null
 
@@ -43,10 +44,12 @@ class BitmapProcessorImpl : BitmapProcessor {
             is Grey4bpp -> {
                 if (currentColorModel !is Grey4bpp)
                     pixels.forEach { p, x, y ->
-                        val lum = currentColorModel.colorOf(p[x, y]).lum() *
-                                (newModel.channelDepth - 1)
-                        p[x, y] = newModel.colorOf(lum.roundToInt()).int
+                        val lum = currentColorModel.colorOf(p[x, y]).lum() * (Grey4bpp.channelDepth - 1)
+                        p[x, y] = Grey4bpp.colorOf(lum.roundToInt()).int
                     }
+
+                require(pixels.arr.all { it in 0..15 })
+                pixels.model = Grey4bpp
             }
 
             is Monochrome -> {
@@ -54,8 +57,11 @@ class BitmapProcessorImpl : BitmapProcessor {
                     val lum = currentColorModel.colorOf(p[x, y]).lum() *
                             (newModel.channelDepth - 1)
 
-                    p[x, y] = newModel.colorOf(lum.fastRoundToInt()).int
+                    p[x, y] = Monochrome.colorOf(if (lum > 0) 1 else 0).int
                 }
+
+                require(pixels.arr.all { it in 0..1 })
+                pixels.model = Monochrome
             }
 
             is Argb -> {
@@ -64,11 +70,10 @@ class BitmapProcessorImpl : BitmapProcessor {
                     is Monochrome -> {
 
                         pixels.forEach { p, x, y ->
-                            val bwColor = currentColorModel.colorOf(p[x, y])[Monochrome.W] *
-                                    (newModel.channelDepth - 1)
+                            val bwColor = p[x, y] * (Argb.channelDepth - 1)
 
-                            p[x, y] = newModel.colorOf(
-                                a = newModel.channelDepth - 1,
+                            p[x, y] = Argb.colorOf(
+                                a = Argb.channelDepth - 1,
                                 r = bwColor,
                                 g = bwColor,
                                 b = bwColor
@@ -126,7 +131,12 @@ class BitmapProcessorImpl : BitmapProcessor {
             }
         }
 
-        val scaledBitmap = Pixels(IntArray(newWidth * newHeight), newWidth, newHeight)
+        val scaledBitmap = Pixels(
+            arr = IntArray(newWidth * newHeight),
+            width = newWidth,
+            height = newHeight,
+            model = pixels.model
+        )
         val (scaleX, scaleY) = (originalWidth.toFloat() / newWidth) to (originalHeight.toFloat() / newHeight)
         scaledBitmap.forEach { p, x, y ->
             p[x, y] = pixels[
