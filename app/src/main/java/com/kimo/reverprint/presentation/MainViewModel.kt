@@ -16,6 +16,9 @@ class MainViewModel(
 
     var imagePreview = MutableStateFlow<Printer.PrintPreviews?>(null)
     val device get() = printer.connectedTo
+    val printConfiguration = Printer.PrintConfiguration(
+        addSpaceAfter = true
+    )
 
     fun findAndConnect() = viewModelScope.launch {
         val device = printer.findAvailable().first()
@@ -28,13 +31,13 @@ class MainViewModel(
 
     fun print4bpp() = viewModelScope.launch {
         imagePreview.value?.let {
-            printer.print(it, PrintMode.BPP4)
+            printer.print(it, PrintMode.BPP4, printConfiguration)
         } ?: println("preview is not provided")
     }
 
     fun print1bpp() = viewModelScope.launch {
         imagePreview.value?.let {
-            printer.print(it, PrintMode.BPP1)
+            printer.print(it, PrintMode.BPP1, printConfiguration)
         }
     }
 

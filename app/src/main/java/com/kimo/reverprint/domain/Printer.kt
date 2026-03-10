@@ -12,9 +12,17 @@ interface Printer {
     suspend fun disconnect()
 
     suspend fun generatePreviews(imageBitmap: Bitmap): PrintPreviews
-    suspend fun print(imagePreview: PrintPreviews, mode: PrintMode)
+    suspend fun print(
+        imagePreview: PrintPreviews,
+        mode: PrintMode,
+        configuration: PrintConfiguration
+    )
 
     abstract class PrintPreviews(
         private val availableModes: Map<PrintMode, Bitmap>
     ) { operator fun get(mode: PrintMode) = availableModes[mode] }
+
+    class PrintConfiguration(
+        val addSpaceAfter: Boolean = true
+    )
 }

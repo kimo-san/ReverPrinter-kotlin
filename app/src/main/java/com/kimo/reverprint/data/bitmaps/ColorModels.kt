@@ -34,12 +34,8 @@ object Argb: ColorModel {
         override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
         override fun lum(): Float = android.graphics.Color.luminance(int)
 
-        override fun remapped(
-            block: ColorOfModel.Remappable<Int, Int>.(Int, Int) -> Unit
-        ): ColorOfModel {
-            val remap = IntArray(model.channelCount) { get(it) }
-            val remappable = Remappable { key, newValue -> remap[key] = newValue }
-            repeat(model.channelCount) { remappable.block(it, get(it)) }
+        override fun remappedValues(block: (Int, Int) -> Int): ColorOfModel {
+            val remap = defRemapImpl(block)
             return ArgbColor(remap[A], remap[R], remap[G], remap[B])
         }
     }
@@ -65,12 +61,9 @@ object Grey4bpp: ColorModel {
 
         override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
         override fun lum(): Float = lum(W)
-        override fun remapped(
-            block: ColorOfModel.Remappable<Int, Int>.(Int, Int) -> Unit
-        ): ColorOfModel {
-            val remap = IntArray(model.channelCount) { get(it) }
-            val remappable = Remappable { key, newValue -> remap[key] = newValue }
-            repeat(model.channelCount) { remappable.block(it, get(it)) }
+
+        override fun remappedValues(block: (Int, Int) -> Int): ColorOfModel {
+            val remap = defRemapImpl(block)
             return GrayscaleColor(remap[W])
         }
     }
@@ -95,20 +88,16 @@ object Monochrome: ColorModel {
 
         override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
         override fun lum(): Float = lum(W)
-        override fun remapped(
-            block: ColorOfModel.Remappable<Int, Int>.(Int, Int) -> Unit
-        ): ColorOfModel {
-            val remap = IntArray(model.channelCount) { get(it) }
-            val remappable = Remappable { key, newValue -> remap[key] = newValue }
-            repeat(model.channelCount) { remappable.block(it, get(it)) }
+
+        override fun remappedValues(block: (Int, Int) -> Int): ColorOfModel {
+            val remap = defRemapImpl(block)
             return MonochromeColor(remap[W])
         }
     }
 }
 
-private fun Remappable(onRemap: (key: Int, newValue: Int) -> Unit) =
-    object : ColorOfModel.Remappable<Int, Int> {
-        override fun set(key: Int, newValue: Int) {
-            onRemap(key, newValue)
-        }
-    }
+private fun ColorOfModel.defRemapImpl(block: (channel: Int, value: Int) -> Int): IntArray {
+    val remap = IntArray(model.channelCount) { ch -> get(ch) }
+    repeat(model.channelCount) { ch -> remap[ch] = block(ch, get(ch)) }
+    return remap
+}

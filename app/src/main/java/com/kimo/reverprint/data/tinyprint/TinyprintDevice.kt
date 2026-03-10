@@ -1,13 +1,12 @@
 package com.kimo.reverprint.data.tinyprint
 
 /**
- *
  * Copy-pasted class `PrinterModel.Databean` from decompiled apk with multiple constructors.
  *
- * Many parameters are not used in this project at all, but if some bug occurs your
+ * Most of parameters is not used in this project at all, but if some bug occurs your
  * printer, at least, you can to find some specific specs of your model.
  */
-data class TinyprintPrinterBean(
+data class TinyprintDevice(
     val isGrayPrint: Boolean = false,
     val grayThinEneragy: Int = 0,
     val grayModerationEneragy: Int = 0,
@@ -56,7 +55,7 @@ data class TinyprintPrinterBean(
     val thinEneragy: Int,
     val isUseSPP: Boolean,
 
-    //// ANOTHER SPECS FROM APK
+    // ANOTHER SPECS FROM APK
     val usesCompressionForGreyScale: Boolean = true, // special for FL01 - false
     val blockCountForGreyPrint: Int = 20, // special for DL_X7 - 1
 ) {
@@ -1371,7 +1370,7 @@ data class TinyprintPrinterBean(
 
         val supportedPrinters = buildMap {
             put(
-                "A200", TinyprintPrinterBean(
+                "A200", TinyprintDevice(
                     "A200",
                     0,
                     8,
@@ -1404,7 +1403,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "A33", TinyprintPrinterBean(
+                "A33", TinyprintDevice(
                     "A33",
                     0,
                     2,
@@ -1442,7 +1441,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "A41II", TinyprintPrinterBean(
+                "A41II", TinyprintDevice(
                     "A41II",
                     0,
                     8,
@@ -1475,7 +1474,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "A41III", TinyprintPrinterBean(
+                "A41III", TinyprintDevice(
                     "A41III",
                     0,
                     8,
@@ -1508,7 +1507,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "A42II", TinyprintPrinterBean(
+                "A42II", TinyprintDevice(
                     "A42II",
                     0,
                     8,
@@ -1541,7 +1540,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "A43", TinyprintPrinterBean(
+                "A43", TinyprintDevice(
                     "A43",
                     0,
                     8,
@@ -1578,7 +1577,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "A4300", TinyprintPrinterBean(
+                "A4300", TinyprintDevice(
                     "A4300",
                     0,
                     8,
@@ -1615,7 +1614,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "CMT_0510", TinyprintPrinterBean(
+                "CMT_0510", TinyprintDevice(
                     "CMT-0510",
                     0,
                     2,
@@ -1645,7 +1644,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "CP01", TinyprintPrinterBean(
+                "CP01", TinyprintDevice(
                     "CP01",
                     0,
                     2,
@@ -1684,7 +1683,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "D1", TinyprintPrinterBean(
+                "D1", TinyprintDevice(
                     "D1",
                     0,
                     2,
@@ -1722,7 +1721,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "D100", TinyprintPrinterBean(
+                "D100", TinyprintDevice(
                     "D100",
                     0,
                     4,
@@ -1764,7 +1763,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DL_GE225", TinyprintPrinterBean(
+                "DL_GE225", TinyprintDevice(
                     "DL_GE225",
                     0,
                     2,
@@ -1802,7 +1801,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DL_X2", TinyprintPrinterBean(
+                "DL_X2", TinyprintDevice(
                     "DL_X2",
                     0,
                     2,
@@ -1840,7 +1839,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DL_X2Pro", TinyprintPrinterBean(
+                "DL_X2Pro", TinyprintDevice(
                     "DL_X2Pro",
                     0,
                     2,
@@ -1878,7 +1877,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DL_X7", TinyprintPrinterBean(
+                "DL_X7", TinyprintDevice(
                     str = "DL_X7",
                     i = 0,
                     i2 = 4,
@@ -1921,7 +1920,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DL_X7Pro", TinyprintPrinterBean(
+                "DL_X7Pro", TinyprintDevice(
                     "DL_X7Pro",
                     0,
                     4,
@@ -1963,7 +1962,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DT1_0", TinyprintPrinterBean(
+                "DT1_0", TinyprintDevice(
                     "DT1-0",
                     0,
                     2,
@@ -2001,7 +2000,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DTR_R0", TinyprintPrinterBean(
+                "DTR_R0", TinyprintDevice(
                     "DTR-R0",
                     0,
                     2,
@@ -2039,7 +2038,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DY03", TinyprintPrinterBean(
+                "DY03", TinyprintDevice(
                     "DY03",
                     0,
                     2,
@@ -2077,7 +2076,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "DY49", TinyprintPrinterBean(
+                "DY49", TinyprintDevice(
                     "DY49",
                     0,
                     2,
@@ -2117,7 +2116,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "EMX_040256", TinyprintPrinterBean(
+                "EMX_040256", TinyprintDevice(
                     "EMX-040256",
                     0,
                     2,
@@ -2155,7 +2154,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "FC02", TinyprintPrinterBean(
+                "FC02", TinyprintDevice(
                     "FC02",
                     0,
                     2,
@@ -2193,7 +2192,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GB02SH", TinyprintPrinterBean(
+                "GB02SH", TinyprintDevice(
                     "GB02SH",
                     0,
                     2,
@@ -2231,7 +2230,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GB03PH", TinyprintPrinterBean(
+                "GB03PH", TinyprintDevice(
                     "GB03PH",
                     0,
                     2,
@@ -2269,7 +2268,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GB03PL", TinyprintPrinterBean(
+                "GB03PL", TinyprintDevice(
                     "GB03PL",
                     0,
                     2,
@@ -2307,7 +2306,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GB03SH", TinyprintPrinterBean(
+                "GB03SH", TinyprintDevice(
                     "GB03SH",
                     0,
                     2,
@@ -2345,7 +2344,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GB03SL", TinyprintPrinterBean(
+                "GB03SL", TinyprintDevice(
                     "GB03SL",
                     0,
                     2,
@@ -2383,7 +2382,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GL_VS9", TinyprintPrinterBean(
+                "GL_VS9", TinyprintDevice(
                     "GL-VS9",
                     0,
                     8,
@@ -2420,7 +2419,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GT09", TinyprintPrinterBean(
+                "GT09", TinyprintDevice(
                     "GT09",
                     0,
                     8,
@@ -2460,7 +2459,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GT10", TinyprintPrinterBean(
+                "GT10", TinyprintDevice(
                     "GT10",
                     0,
                     8,
@@ -2501,7 +2500,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GV_MA211", TinyprintPrinterBean(
+                "GV_MA211", TinyprintDevice(
                     "GV-MA211",
                     0,
                     2,
@@ -2531,7 +2530,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GW08", TinyprintPrinterBean(
+                "GW08", TinyprintDevice(
                     "GW08",
                     0,
                     8,
@@ -2565,7 +2564,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "GW09", TinyprintPrinterBean(
+                "GW09", TinyprintDevice(
                     "GW09",
                     0,
                     8,
@@ -2599,7 +2598,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "HD1", TinyprintPrinterBean(
+                "HD1", TinyprintDevice(
                     "HD1",
                     0,
                     3,
@@ -2629,7 +2628,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "HT0125", TinyprintPrinterBean(
+                "HT0125", TinyprintDevice(
                     "HT0125",
                     0,
                     2,
@@ -2667,7 +2666,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "IM_04", TinyprintPrinterBean(
+                "IM_04", TinyprintDevice(
                     "IM.04",
                     0,
                     2,
@@ -2705,7 +2704,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "IprintIt_Printer", TinyprintPrinterBean(
+                "IprintIt_Printer", TinyprintDevice(
                     "IprintIt",
                     0,
                     2,
@@ -2735,7 +2734,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "JRX01", TinyprintPrinterBean(
+                "JRX01", TinyprintDevice(
                     "JRX01",
                     0,
                     2,
@@ -2775,7 +2774,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "KF_5", TinyprintPrinterBean(
+                "KF_5", TinyprintDevice(
                     "KF-5",
                     0,
                     2,
@@ -2820,7 +2819,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "LGM01", TinyprintPrinterBean(
+                "LGM01", TinyprintDevice(
                     "LGM01",
                     0,
                     2,
@@ -2858,7 +2857,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "LP6", TinyprintPrinterBean(
+                "LP6", TinyprintDevice(
                     "LP6",
                     0,
                     2,
@@ -2888,7 +2887,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "Label_Printer", TinyprintPrinterBean(
+                "Label_Printer", TinyprintDevice(
                     "Label Printer",
                     0,
                     1,
@@ -2923,7 +2922,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "Luxorp_PX10", TinyprintPrinterBean(
+                "Luxorp_PX10", TinyprintDevice(
                     "Luxorp.PX10",
                     0,
                     2,
@@ -2961,7 +2960,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ML_MP_01", TinyprintPrinterBean(
+                "ML_MP_01", TinyprintDevice(
                     "ML-MP-01",
                     0,
                     2,
@@ -2999,7 +2998,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "MPA81", TinyprintPrinterBean(
+                "MPA81", TinyprintDevice(
                     "MPA81",
                     0,
                     8,
@@ -3036,7 +3035,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "MV_B530", TinyprintPrinterBean(
+                "MV_B530", TinyprintDevice(
                     "MV-B530",
                     0,
                     8,
@@ -3073,7 +3072,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "MiniPrinter", TinyprintPrinterBean(
+                "MiniPrinter", TinyprintDevice(
                     "Mini Printer",
                     0,
                     2,
@@ -3111,7 +3110,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "P2", TinyprintPrinterBean(
+                "P2", TinyprintDevice(
                     "P2",
                     0,
                     2,
@@ -3149,7 +3148,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "P4", TinyprintPrinterBean(
+                "P4", TinyprintDevice(
                     "P4",
                     0,
                     8,
@@ -3184,7 +3183,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "P5", TinyprintPrinterBean(
+                "P5", TinyprintDevice(
                     "P5",
                     0,
                     2,
@@ -3222,7 +3221,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "P6", TinyprintPrinterBean(
+                "P6", TinyprintDevice(
                     "P6",
                     0,
                     2,
@@ -3260,7 +3259,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "P7H", TinyprintPrinterBean(
+                "P7H", TinyprintDevice(
                     "P7H",
                     0,
                     2,
@@ -3298,7 +3297,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "PT001", TinyprintPrinterBean(
+                "PT001", TinyprintDevice(
                     "PT001",
                     0,
                     2,
@@ -3336,7 +3335,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "Pocket_Printer", TinyprintPrinterBean(
+                "Pocket_Printer", TinyprintDevice(
                     "Pocket Printer",
                     0,
                     2,
@@ -3374,7 +3373,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "Professional_Printer", TinyprintPrinterBean(
+                "Professional_Printer", TinyprintDevice(
                     "Professional Printer",
                     0,
                     8,
@@ -3411,7 +3410,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "QDID", TinyprintPrinterBean(
+                "QDID", TinyprintDevice(
                     "QDID",
                     0,
                     8,
@@ -3448,7 +3447,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "QDX01", TinyprintPrinterBean(
+                "QDX01", TinyprintDevice(
                     "QDX01",
                     0,
                     2,
@@ -3487,7 +3486,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ROSSMANN", TinyprintPrinterBean(
+                "ROSSMANN", TinyprintDevice(
                     "ROSSMANN",
                     0,
                     2,
@@ -3525,7 +3524,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "RS9000", TinyprintPrinterBean(
+                "RS9000", TinyprintDevice(
                     "RS9000",
                     0,
                     2,
@@ -3565,7 +3564,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "SC03H", TinyprintPrinterBean(
+                "SC03H", TinyprintDevice(
                     "SC03H",
                     0,
                     2,
@@ -3603,7 +3602,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "SeznikEcho", TinyprintPrinterBean(
+                "SeznikEcho", TinyprintDevice(
                     "SeznikEcho",
                     0,
                     2,
@@ -3641,7 +3640,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "SeznikNeo", TinyprintPrinterBean(
+                "SeznikNeo", TinyprintDevice(
                     "SeznikNeo",
                     0,
                     2,
@@ -3680,7 +3679,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "Shipping_Printer", TinyprintPrinterBean(
+                "Shipping_Printer", TinyprintDevice(
                     "Shipping Printer",
                     0,
                     4,
@@ -3725,7 +3724,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "Shipping_Printer2", TinyprintPrinterBean(
+                "Shipping_Printer2", TinyprintDevice(
                     "Shipping Printer",
                     0,
                     4,
@@ -3770,7 +3769,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "TCM690464", TinyprintPrinterBean(
+                "TCM690464", TinyprintDevice(
                     "TCM690464",
                     0,
                     2,
@@ -3808,7 +3807,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "U1", TinyprintPrinterBean(
+                "U1", TinyprintDevice(
                     "U1",
                     0,
                     2,
@@ -3849,7 +3848,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "UXPORTMIP", TinyprintPrinterBean(
+                "UXPORTMIP", TinyprintDevice(
                     "UXPORTMIP",
                     0,
                     2,
@@ -3887,7 +3886,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "WL01", TinyprintPrinterBean(
+                "WL01", TinyprintDevice(
                     "WL01",
                     0,
                     2,
@@ -3917,7 +3916,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "X103H", TinyprintPrinterBean(
+                "X103H", TinyprintDevice(
                     "X103H",
                     0,
                     2,
@@ -3955,7 +3954,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "X103h", TinyprintPrinterBean(
+                "X103h", TinyprintDevice(
                     "X103h",
                     0,
                     2,
@@ -3993,7 +3992,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "X16", TinyprintPrinterBean(
+                "X16", TinyprintDevice(
                     "X16",
                     0,
                     2,
@@ -4034,7 +4033,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "XC9", TinyprintPrinterBean(
+                "XC9", TinyprintDevice(
                     "XC9",
                     0,
                     2,
@@ -4072,7 +4071,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "YK_06", TinyprintPrinterBean(
+                "YK_06", TinyprintDevice(
                     "YK06",
                     0,
                     1,
@@ -4107,7 +4106,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ZHHC", TinyprintPrinterBean(
+                "ZHHC", TinyprintDevice(
                     "ZHHC",
                     0,
                     2,
@@ -4137,7 +4136,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ZP801", TinyprintPrinterBean(
+                "ZP801", TinyprintDevice(
                     "ZP801",
                     0,
                     8,
@@ -4174,7 +4173,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ZP802", TinyprintPrinterBean(
+                "ZP802", TinyprintDevice(
                     "ZP802",
                     0,
                     8,
@@ -4211,7 +4210,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ZPA4Z1", TinyprintPrinterBean(
+                "ZPA4Z1", TinyprintDevice(
                     "ZPA4Z1",
                     0,
                     8,
@@ -4242,7 +4241,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "_0019B_C", TinyprintPrinterBean(
+                "_0019B_C", TinyprintDevice(
                     "0019B-C",
                     0,
                     2,
@@ -4280,7 +4279,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "_0019B_D", TinyprintPrinterBean(
+                "_0019B_D", TinyprintDevice(
                     "0019B-D",
                     0,
                     2,
@@ -4318,7 +4317,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "_15P3", TinyprintPrinterBean(
+                "_15P3", TinyprintDevice(
                     "15P3",
                     0,
                     1,
@@ -4353,7 +4352,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "_58p5", TinyprintPrinterBean(
+                "_58p5", TinyprintDevice(
                     "58P5",
                     0,
                     2,
@@ -4383,7 +4382,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ai01", TinyprintPrinterBean(
+                "ai01", TinyprintDevice(
                     "AI01",
                     1,
                     2,
@@ -4413,7 +4412,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "an01", TinyprintPrinterBean(
+                "an01", TinyprintDevice(
                     "AN01",
                     0,
                     2,
@@ -4451,7 +4450,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "dy01", TinyprintPrinterBean(
+                "dy01", TinyprintDevice(
                     "DY01",
                     0,
                     2,
@@ -4481,7 +4480,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ewtto_ET_Z0504", TinyprintPrinterBean(
+                "ewtto_ET_Z0504", TinyprintDevice(
                     "ewtto ET-Z0504",
                     0,
                     2,
@@ -4519,7 +4518,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "fl01", TinyprintPrinterBean(
+                "fl01", TinyprintDevice(
                     str = "FL01",
                     i = 0,
                     i2 = 2,
@@ -4565,7 +4564,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb01", TinyprintPrinterBean(
+                "gb01", TinyprintDevice(
                     "GB01",
                     0,
                     2,
@@ -4595,7 +4594,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb02", TinyprintPrinterBean(
+                "gb02", TinyprintDevice(
                     "GB02",
                     0,
                     2,
@@ -4625,7 +4624,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb03", TinyprintPrinterBean(
+                "gb03", TinyprintDevice(
                     "GB03",
                     0,
                     2,
@@ -4655,7 +4654,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb03_n", TinyprintPrinterBean(
+                "gb03_n", TinyprintDevice(
                     "GB03",
                     0,
                     2,
@@ -4685,7 +4684,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb04", TinyprintPrinterBean(
+                "gb04", TinyprintDevice(
                     "GB04",
                     0,
                     2,
@@ -4715,7 +4714,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb05", TinyprintPrinterBean(
+                "gb05", TinyprintDevice(
                     "GB05",
                     0,
                     2,
@@ -4745,7 +4744,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb06", TinyprintPrinterBean(
+                "gb06", TinyprintDevice(
                     "GB06",
                     0,
                     2,
@@ -4775,7 +4774,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gb06_n", TinyprintPrinterBean(
+                "gb06_n", TinyprintDevice(
                     "GB06",
                     0,
                     2,
@@ -4805,7 +4804,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gt01", TinyprintPrinterBean(
+                "gt01", TinyprintDevice(
                     "GT01",
                     0,
                     2,
@@ -4835,7 +4834,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gt02", TinyprintPrinterBean(
+                "gt02", TinyprintDevice(
                     "GT02",
                     0,
                     2,
@@ -4865,7 +4864,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gt03", TinyprintPrinterBean(
+                "gt03", TinyprintDevice(
                     "GT03",
                     0,
                     2,
@@ -4895,7 +4894,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gt04", TinyprintPrinterBean(
+                "gt04", TinyprintDevice(
                     "GT04",
                     0,
                     2,
@@ -4925,7 +4924,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "gt08", TinyprintPrinterBean(
+                "gt08", TinyprintDevice(
                     "GT08",
                     0,
                     8,
@@ -4958,7 +4957,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "jx001", TinyprintPrinterBean(
+                "jx001", TinyprintDevice(
                     "JX001",
                     0,
                     2,
@@ -4988,7 +4987,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "jxm008", TinyprintPrinterBean(
+                "jxm008", TinyprintDevice(
                     "JXM800",
                     0,
                     8,
@@ -5018,7 +5017,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "lp100", TinyprintPrinterBean(
+                "lp100", TinyprintDevice(
                     "LP100",
                     0,
                     2,
@@ -5048,7 +5047,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "lt01", TinyprintPrinterBean(
+                "lt01", TinyprintDevice(
                     "LT01",
                     0,
                     2,
@@ -5078,7 +5077,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ly01", TinyprintPrinterBean(
+                "ly01", TinyprintDevice(
                     "LY01",
                     0,
                     2,
@@ -5108,7 +5107,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ly02", TinyprintPrinterBean(
+                "ly02", TinyprintDevice(
                     "LY02",
                     0,
                     2,
@@ -5138,7 +5137,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ly03", TinyprintPrinterBean(
+                "ly03", TinyprintDevice(
                     "LY03",
                     0,
                     2,
@@ -5168,7 +5167,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ly05", TinyprintPrinterBean(
+                "ly05", TinyprintDevice(
                     "LY05",
                     0,
                     3,
@@ -5198,7 +5197,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ly10", TinyprintPrinterBean(
+                "ly10", TinyprintDevice(
                     "LY10",
                     0,
                     2,
@@ -5228,7 +5227,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "ly11", TinyprintPrinterBean(
+                "ly11", TinyprintDevice(
                     "LY11",
                     0,
                     2,
@@ -5258,7 +5257,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "m01", TinyprintPrinterBean(
+                "m01", TinyprintDevice(
                     "M01",
                     1,
                     2,
@@ -5288,7 +5287,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "m2", TinyprintPrinterBean(
+                "m2", TinyprintDevice(
                     "M2",
                     0,
                     2,
@@ -5318,7 +5317,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "p1", TinyprintPrinterBean(
+                "p1", TinyprintDevice(
                     "P1",
                     0,
                     2,
@@ -5356,7 +5355,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "p10", TinyprintPrinterBean(
+                "p10", TinyprintDevice(
                     "P10",
                     0,
                     2,
@@ -5386,7 +5385,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "p5ai", TinyprintPrinterBean(
+                "p5ai", TinyprintDevice(
                     "P5AI",
                     1,
                     2,
@@ -5416,7 +5415,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "p7", TinyprintPrinterBean(
+                "p7", TinyprintDevice(
                     "P7",
                     0,
                     2,
@@ -5446,7 +5445,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr02", TinyprintPrinterBean(
+                "pr02", TinyprintDevice(
                     "PR02",
                     0,
                     2,
@@ -5476,7 +5475,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr07", TinyprintPrinterBean(
+                "pr07", TinyprintDevice(
                     "PR07",
                     1,
                     2,
@@ -5506,7 +5505,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr30", TinyprintPrinterBean(
+                "pr30", TinyprintDevice(
                     "PR30",
                     0,
                     3,
@@ -5536,7 +5535,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr35", TinyprintPrinterBean(
+                "pr35", TinyprintDevice(
                     "PR35",
                     1,
                     3,
@@ -5566,7 +5565,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr88", TinyprintPrinterBean(
+                "pr88", TinyprintDevice(
                     "PR88",
                     0,
                     8,
@@ -5596,7 +5595,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr89", TinyprintPrinterBean(
+                "pr89", TinyprintDevice(
                     "PR89",
                     0,
                     8,
@@ -5627,7 +5626,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr891", TinyprintPrinterBean(
+                "pr891", TinyprintDevice(
                     "PR89",
                     0,
                     8,
@@ -5664,7 +5663,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "pr893", TinyprintPrinterBean(
+                "pr893", TinyprintDevice(
                     "PR893",
                     0,
                     8,
@@ -5701,7 +5700,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "rt034h", TinyprintPrinterBean(
+                "rt034h", TinyprintDevice(
                     "RT034h",
                     0,
                     2,
@@ -5739,7 +5738,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "s01", TinyprintPrinterBean(
+                "s01", TinyprintDevice(
                     "S01",
                     1,
                     2,
@@ -5769,7 +5768,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "s101", TinyprintPrinterBean(
+                "s101", TinyprintDevice(
                     "S101",
                     0,
                     2,
@@ -5799,7 +5798,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "s101_n", TinyprintPrinterBean(
+                "s101_n", TinyprintDevice(
                     "S101",
                     0,
                     2,
@@ -5829,7 +5828,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "s102", TinyprintPrinterBean(
+                "s102", TinyprintDevice(
                     "S102",
                     0,
                     2,
@@ -5859,7 +5858,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "s102_n", TinyprintPrinterBean(
+                "s102_n", TinyprintDevice(
                     "S102",
                     0,
                     2,
@@ -5889,7 +5888,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "s5", TinyprintPrinterBean(
+                "s5", TinyprintDevice(
                     "XiaoWa",
                     0,
                     2,
@@ -5928,7 +5927,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "sc03", TinyprintPrinterBean(
+                "sc03", TinyprintDevice(
                     "SC03",
                     0,
                     2,
@@ -5958,7 +5957,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "sc03h", TinyprintPrinterBean(
+                "sc03h", TinyprintDevice(
                     "SC03h",
                     0,
                     2,
@@ -5996,7 +5995,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "sc04", TinyprintPrinterBean(
+                "sc04", TinyprintDevice(
                     "SC04",
                     0,
                     2,
@@ -6026,7 +6025,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "sc04h", TinyprintPrinterBean(
+                "sc04h", TinyprintDevice(
                     "SC04h",
                     0,
                     2,
@@ -6064,7 +6063,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "sc05", TinyprintPrinterBean(
+                "sc05", TinyprintDevice(
                     "SC05",
                     0,
                     2,
@@ -6102,7 +6101,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "wts07", TinyprintPrinterBean(
+                "wts07", TinyprintDevice(
                     "wts07",
                     0,
                     2,
@@ -6142,7 +6141,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x1", TinyprintPrinterBean(
+                "x1", TinyprintDevice(
                     "X1",
                     0,
                     3,
@@ -6172,7 +6171,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x100", TinyprintPrinterBean(
+                "x100", TinyprintDevice(
                     "X100",
                     0,
                     2,
@@ -6210,7 +6209,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x101H", TinyprintPrinterBean(
+                "x101H", TinyprintDevice(
                     " X101H",
                     0,
                     2,
@@ -6248,7 +6247,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x102", TinyprintPrinterBean(
+                "x102", TinyprintDevice(
                     "X102",
                     0,
                     2,
@@ -6286,7 +6285,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x2H", TinyprintPrinterBean(
+                "x2H", TinyprintDevice(
                     "X2H",
                     0,
                     2,
@@ -6324,7 +6323,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x2h", TinyprintPrinterBean(
+                "x2h", TinyprintDevice(
                     "X2h",
                     0,
                     2,
@@ -6362,7 +6361,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x5", TinyprintPrinterBean(
+                "x5", TinyprintDevice(
                     "X5",
                     0,
                     2,
@@ -6392,7 +6391,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x5H", TinyprintPrinterBean(
+                "x5H", TinyprintDevice(
                     "X5H",
                     0,
                     2,
@@ -6430,7 +6429,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x5HP", TinyprintPrinterBean(
+                "x5HP", TinyprintDevice(
                     "X5HP",
                     0,
                     2,
@@ -6468,7 +6467,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x5_n", TinyprintPrinterBean(
+                "x5_n", TinyprintDevice(
                     "X5",
                     0,
                     2,
@@ -6498,7 +6497,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x5h", TinyprintPrinterBean(
+                "x5h", TinyprintDevice(
                     "X5h",
                     0,
                     2,
@@ -6536,7 +6535,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x6", TinyprintPrinterBean(
+                "x6", TinyprintDevice(
                     "X6",
                     0,
                     2,
@@ -6566,7 +6565,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x6H", TinyprintPrinterBean(
+                "x6H", TinyprintDevice(
                     "X6H",
                     0,
                     2,
@@ -6604,7 +6603,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x6HP", TinyprintPrinterBean(
+                "x6HP", TinyprintDevice(
                     "X6HP",
                     0,
                     2,
@@ -6642,7 +6641,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x6_n", TinyprintPrinterBean(
+                "x6_n", TinyprintDevice(
                     "X6",
                     0,
                     2,
@@ -6672,7 +6671,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x6h", TinyprintPrinterBean(
+                "x6h", TinyprintDevice(
                     "X6h",
                     0,
                     2,
@@ -6710,7 +6709,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x7", TinyprintPrinterBean(
+                "x7", TinyprintDevice(
                     "X7",
                     0,
                     2,
@@ -6740,7 +6739,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x7H", TinyprintPrinterBean(
+                "x7H", TinyprintDevice(
                     "X7H",
                     0,
                     2,
@@ -6778,7 +6777,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x7HP", TinyprintPrinterBean(
+                "x7HP", TinyprintDevice(
                     "X7HP",
                     0,
                     2,
@@ -6816,7 +6815,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x7_n", TinyprintPrinterBean(
+                "x7_n", TinyprintDevice(
                     "X7",
                     0,
                     2,
@@ -6846,7 +6845,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x7h", TinyprintPrinterBean(
+                "x7h", TinyprintDevice(
                     "X7h",
                     0,
                     2,
@@ -6884,7 +6883,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x8", TinyprintPrinterBean(
+                "x8", TinyprintDevice(
                     "X8",
                     1,
                     8,
@@ -6914,7 +6913,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x8l", TinyprintPrinterBean(
+                "x8l", TinyprintDevice(
                     "X8-L",
                     0,
                     8,
@@ -6951,7 +6950,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x8w", TinyprintPrinterBean(
+                "x8w", TinyprintDevice(
                     "X8-W",
                     1,
                     8,
@@ -6988,7 +6987,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "x9", TinyprintPrinterBean(
+                "x9", TinyprintDevice(
                     "X9",
                     0,
                     8,
@@ -7025,7 +7024,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "xw001", TinyprintPrinterBean(
+                "xw001", TinyprintDevice(
                     "XW001",
                     0,
                     2,
@@ -7055,7 +7054,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "xw002", TinyprintPrinterBean(
+                "xw002", TinyprintDevice(
                     "XW002",
                     0,
                     2,
@@ -7085,7 +7084,7 @@ data class TinyprintPrinterBean(
                 )
             )
             put(
-                "xw003", TinyprintPrinterBean(
+                "xw003", TinyprintDevice(
                     "XW003",
                     1,
                     2,

@@ -87,6 +87,10 @@ class AndroidBluetoothLeController(
 
             val gatt = deviceGatt!!
             val callback = gattCallback!!
+            callback.onWriteResult = {
+                continuation.resumeWith(it)
+                callback.onWriteResult = null
+            }
 
             val characteristic = gatt.services.flatMap { it.characteristics }
                 .find { it.uuid == inputCharacteristic.uuid }.let {
@@ -106,10 +110,6 @@ class AndroidBluetoothLeController(
                 gatt.writeCharacteristic(characteristic)
             }
 
-            callback.onWriteResult = {
-                if (continuation.isActive)
-                    continuation.resumeWith(it)
-            }
         }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -149,8 +149,8 @@ class AndroidBluetoothLeController(
         )
 
     private open class GattCallback(
-        var onWriteResult: (Result<Unit>) -> Unit = { },
-        var onConnect: (Result<BluetoothGatt>) -> Unit = { },
+        var onWriteResult: ((Result<Unit>) -> Unit)? = null,
+        var onConnect: ((Result<BluetoothGatt>) -> Unit)? = null
     ): BluetoothGattCallback() {
 
         override fun onCharacteristicWrite(
@@ -160,10 +160,10 @@ class AndroidBluetoothLeController(
         ) {
             when (status) {
                 BluetoothGatt.GATT_SUCCESS -> {
-                    onWriteResult(Result.success(Unit))
+                    onWriteResult?.invoke(Result.success(Unit))
                 }
                 BluetoothGatt.GATT_FAILURE -> {
-                    onWriteResult(Result.failure(IllegalStateException("Could not write to device")))
+                    onWriteResult?.invoke(Result.failure(IllegalStateException("Could not write to device")))
                 }
             }
         }
@@ -174,7 +174,7 @@ class AndroidBluetoothLeController(
                 BluetoothGatt.GATT_SUCCESS -> {
                 }
                 BluetoothGatt.GATT_FAILURE -> {
-                    onConnect(Result.failure(IllegalStateException("Could not connect to device")))
+                    onConnect?.invoke(Result.failure(IllegalStateException("Could not connect to device")))
                 }
             }
 
@@ -184,7 +184,7 @@ class AndroidBluetoothLeController(
                 }
                 BluetoothGatt.STATE_DISCONNECTED -> {
                     gatt.close()
-                    onConnect(Result.failure(IllegalStateException("Could not connect to device")))
+                    onConnect?.invoke(Result.failure(IllegalStateException("Could not connect to device")))
                 }
             }
         }
@@ -192,10 +192,10 @@ class AndroidBluetoothLeController(
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             when (status) {
                 BluetoothGatt.GATT_SUCCESS -> {
-                    onConnect(Result.success(gatt))
+                    onConnect?.invoke(Result.success(gatt))
                 }
                 BluetoothGatt.GATT_FAILURE -> {
-                    onConnect(Result.failure(IllegalStateException("Could not find services")))
+                    onConnect?.invoke(Result.failure(IllegalStateException("Could not find services")))
                 }
             }
         }

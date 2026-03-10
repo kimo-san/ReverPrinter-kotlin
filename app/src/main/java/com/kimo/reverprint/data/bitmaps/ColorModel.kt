@@ -30,10 +30,10 @@ interface ColorOfModel {
      */
     fun lum(): Float
 
-    fun remapped(block: Remappable<Int, Int>.(channel: Int, value: Int) -> Unit): ColorOfModel
-    fun interface Remappable<K, T> {
-        fun set(key: K, newValue: T)
-    }
+    /**
+     * Remaps values of each color channel
+     */
+    fun remappedValues(block: (channel: Int, value: Int) -> Int): ColorOfModel
 }
 
 

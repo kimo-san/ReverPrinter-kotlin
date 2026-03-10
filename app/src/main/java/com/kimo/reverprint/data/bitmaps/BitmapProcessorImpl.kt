@@ -1,18 +1,15 @@
 package com.kimo.reverprint.data.bitmaps
 
 import android.graphics.Bitmap
-import androidx.compose.runtime.isTraceInProgress
 import androidx.compose.ui.util.fastRoundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import kotlin.math.roundToInt
-import kotlin.properties.Delegates
 
 class BitmapProcessorImpl : BitmapProcessor {
 
-    private var pixels: Pixels = Pixels(intArrayOf(0), 1, 1, Monochrome)
-    private var currentColorModel by Delegates.notNull<ColorModel>()
+    private lateinit var pixels: Pixels
     private var settings: BitmapSettings? = null
 
     override fun setSettings(settings: BitmapSettings) {
@@ -22,7 +19,6 @@ class BitmapProcessorImpl : BitmapProcessor {
     override fun setImage(bitmap: Bitmap) {
         val bm = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         pixels = Pixels(bm)
-        currentColorModel = Argb
     }
 
     override suspend fun processPixels(): Pixels {
@@ -40,24 +36,28 @@ class BitmapProcessorImpl : BitmapProcessor {
 
     suspend fun changeColorModel(newModel: ColorModel) = withContext(Dispatchers.Default) {
         when (newModel) {
-
+            pixels.model -> Unit
             is Grey4bpp -> {
-                if (currentColorModel !is Grey4bpp)
-                    pixels.forEach { p, x, y ->
-                        val lum = currentColorModel.colorOf(p[x, y]).lum() * (Grey4bpp.channelDepth - 1)
-                        p[x, y] = Grey4bpp.colorOf(lum.roundToInt()).int
-                    }
-
+                
+                pixels.forEach { p, x, y ->
+                    val lum =
+                        p.model.colorOf(p[x, y]).lum() * (Grey4bpp.channelDepth - 1)
+                    p[x, y] = Grey4bpp.colorOf(lum.roundToInt()).int
+                }
+                
                 require(pixels.arr.all { it in 0..15 })
                 pixels.model = Grey4bpp
             }
 
             is Monochrome -> {
-                pixels.forEach { p, x, y ->
-                    val lum = currentColorModel.colorOf(p[x, y]).lum() *
-                            (newModel.channelDepth - 1)
 
-                    p[x, y] = Monochrome.colorOf(if (lum > 0) 1 else 0).int
+                val avrLum = pixels.arr.mapIndexed { i, v ->
+                    pixels.model.colorOf(pixels.arr[i]).lum()
+                }.average()
+                
+                pixels.forEach { p, x, y ->
+                    val lum = p.model.colorOf(p[x, y]).lum()
+                    p[x, y] = Monochrome.colorOf(if (lum > avrLum) 1 else 0).int
                 }
 
                 require(pixels.arr.all { it in 0..1 })
@@ -65,7 +65,7 @@ class BitmapProcessorImpl : BitmapProcessor {
             }
 
             is Argb -> {
-                when (currentColorModel) {
+                when (pixels.model) {
 
                     is Monochrome -> {
 
@@ -84,7 +84,7 @@ class BitmapProcessorImpl : BitmapProcessor {
                     is Grey4bpp -> {
                         pixels.forEach { p, x, y ->
 
-                            val grayColor = (currentColorModel
+                            val grayColor = (p.model
                                 .colorOf(p[x, y])
                                 .lum() * (newModel.channelDepth - 1))
                                 .fastRoundToInt()
@@ -97,15 +97,12 @@ class BitmapProcessorImpl : BitmapProcessor {
                             ).int
                         }
                     }
-
-                    is Argb -> {  }
                     else -> error("Unsupported")
                 }
+                pixels.model = Argb
             }
-
             else -> error("Unsupported")
         }
-        currentColorModel = newModel
     }
 
     suspend fun resize(width: Int?, height: Int?): Unit = withContext(Dispatchers.Default) {
@@ -150,32 +147,61 @@ class BitmapProcessorImpl : BitmapProcessor {
 
     suspend fun dither(): Unit = withContext(Dispatchers.Default) {
 
-        fun findClosestColor(color: ColorOfModel): ColorOfModel =
-            color.remapped { channel, value ->
-                val quantize = currentColorModel.channelDepth - 1f
-                set(channel, (value / quantize * quantize).fastRoundToInt())
+        /* orig color to nearest color */
+        fun lookupTable(model: ColorModel): IntArray {
+
+            val table = IntArray(256)
+            val step = 255f / (model.channelDepth - 1)
+
+            for (v in 0..255) {
+                val index = (v / step).roundToInt()
+                val quant = (index * step).roundToInt()
+                table[v] = quant
             }
+
+            return table
+        }
+
+        val lookup = lookupTable(pixels.model)
+        fun findClosestColor(color: ColorOfModel): ColorOfModel =
+            color.remappedValues { channel, value -> lookup[value] }
 
         fun applyDifference(
             color: ColorOfModel,
             errors: IntArray,
             factor: Float
         ): ColorOfModel =
-            color.remapped { channel, newValue ->
-                set(channel, (color[channel] + errors[channel] * factor).roundToInt())
+            color.remappedValues { channel, _ ->
+                (color[channel] + errors[channel] * factor).roundToInt()
             }
 
         pixels.forEach { p, x, y ->
 
-            val oldPixel = currentColorModel.colorOf(p[x, y])
-            val newPixel = findClosestColor(currentColorModel.colorOf(p[x, y]))
+            val oldPixel = p.model.colorOf(p[x, y])
+            val newPixel = findClosestColor(oldPixel)
 
             val errorsOnChannels = IntArray(oldPixel.model.channelCount) { oldPixel[it] - newPixel[it] }
-            p[x    , y    ] = newPixel.int
-            p[x + 1, y    ] = applyDifference(currentColorModel.colorOf(p[x + 1, y]), errorsOnChannels, 7f / 16).int
-            p[x - 1, y + 1] = applyDifference(currentColorModel.colorOf(p[x - 1, y + 1]), errorsOnChannels, 3f / 16).int
-            p[x    , y + 1] = applyDifference(currentColorModel.colorOf(p[x, y + 1]), errorsOnChannels, 5f / 16).int
-            p[x + 1, y + 1] = applyDifference(currentColorModel.colorOf(p[x + 1, y + 1]), errorsOnChannels, 1f / 16).int
+            p[x, y] = newPixel.int
+            p[x + 1, y] = applyDifference(
+                p.model.colorOf(p[x + 1, y]),
+                errorsOnChannels,
+                7f / 16
+            ).int
+            p[x - 1, y + 1] = applyDifference(
+                p.model.colorOf(p[x - 1, y + 1]),
+                errorsOnChannels,
+                3f / 16
+            ).int
+            p[x, y + 1] = applyDifference(
+                p.model.colorOf(p[x, y + 1]),
+                errorsOnChannels,
+                5f / 16
+            ).int
+            p[x + 1, y + 1] = applyDifference(
+                p.model.colorOf(p[x + 1, y + 1]),
+                errorsOnChannels,
+                1f / 16
+            ).int
         }
     }
 

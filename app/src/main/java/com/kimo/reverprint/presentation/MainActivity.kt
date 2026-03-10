@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kimo.reverprint.domain.PrintMode
@@ -82,8 +84,13 @@ fun Greeting(
             )
         },
         floatingActionButton = {
-            FloatingActionButton({ viewModel.print4bpp() }) {
-                Text("Print 4bpp")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FloatingActionButton({ viewModel.print1bpp() }) {
+                    Text("Print 1bpp", Modifier.padding(8.dp))
+                }
+                FloatingActionButton({ viewModel.print4bpp() }) {
+                    Text("Print 4bpp", Modifier.padding(8.dp))
+                }
             }
         }
     ) { it -> it
