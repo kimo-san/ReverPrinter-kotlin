@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothStatusCodes
 import android.content.BroadcastReceiver
@@ -15,17 +16,25 @@ import android.content.IntentFilter
 import android.os.Build
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.UUID
 
 typealias IBluetoothDevice = com.kimo.reverprint.data.bluetooth.BluetoothDevice
+
+@Suppress("DEPRECATION")
 class AndroidBluetoothLeController(
     private val context: Context,
-    private val inputCharacteristic: BleCharacteristic?
+    private val txCharacteristic: BleCharacteristic?,
+    private val rxCharacteristic: BleCharacteristic?
 ): BluetoothController {
 
-    override var connectedToDevice: IBluetoothDevice? = null
+    override var connectedToDevice = MutableStateFlow<IBluetoothDevice?>(null)
 
     private var deviceGatt: BluetoothGatt? = null
     private val bluetoothAdapter by lazy { context.getSystemService(BluetoothManager::class.java)?.adapter }
@@ -58,7 +67,6 @@ class AndroidBluetoothLeController(
     override suspend fun connect(device: IBluetoothDevice) {
         bluetoothAdapter?.cancelDiscovery()
         bluetoothAdapter?.getRemoteDevice(device.address)?.bluetoothGatt()
-        connectedToDevice = deviceGatt?.device?.toDomain()
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -66,6 +74,33 @@ class AndroidBluetoothLeController(
         deviceGatt?.close()
         deviceGatt = null
         gattCallback = null
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    override fun read(): Flow<ByteArray> {
+        return callbackFlow {
+
+            val chars = deviceGatt?.services?.flatMap { it.characteristics }?.filterNotNull()
+
+            chars?.forEach { char ->
+                if (deviceGatt?.setCharacteristicNotification(char, true) == true) {
+                    println("Listening... ${char.uuid}")
+
+                    launch {
+                        gattCallback?.awaitNotifications(char.uuid) {
+                            it.getOrNull()?.let { element ->
+                                trySendBlocking(element)
+                            }
+                        }
+                    }
+                }            }
+
+            awaitClose {
+                chars?.forEach {
+                    deviceGatt?.setCharacteristicNotification(it, false)
+                }
+            }
+        }
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -80,20 +115,20 @@ class AndroidBluetoothLeController(
                 ?: continuation.resumeWith(Result.failure(IllegalStateException("Gatt callback is not initialized"))).also {
                     return@suspendCancellableCoroutine
                 }
-            inputCharacteristic
+            txCharacteristic
                 ?: continuation.resumeWith(Result.failure(IllegalStateException("UUID is not given."))).also {
                     return@suspendCancellableCoroutine
                 }
 
             val gatt = deviceGatt!!
             val callback = gattCallback!!
-            callback.onWriteResult = {
+
+            callback.awaitWriteResult {
                 continuation.resumeWith(it)
-                callback.onWriteResult = null
             }
 
             val characteristic = gatt.services.flatMap { it.characteristics }
-                .find { it.uuid == inputCharacteristic.uuid }.let {
+                .find { it.uuid == txCharacteristic.uuid }.let {
                     if (it == null) {
                         continuation.resumeWith(Result.failure(IllegalStateException("Characteristic not found")))
                         return@suspendCancellableCoroutine
@@ -117,6 +152,21 @@ class AndroidBluetoothLeController(
         suspendCancellableCoroutine { continuation ->
 
             val callback = GattCallback()
+            callback.apply {
+                awaitDisconnect {
+                    connectedToDevice.update { null }
+                }
+                awaitConnection { gattResult ->
+                    gattResult.onSuccess { gatt ->
+                        deviceGatt = gatt
+                        gattCallback = callback
+                        connectedToDevice.update { gatt.device?.toDomain() }
+                        continuation.resumeWith(Result.success(Unit))
+                    }.onFailure {
+                        continuation.resumeWith(Result.failure(it))
+                    }
+                }
+            }
 
             val gatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 connectGatt(
@@ -125,16 +175,6 @@ class AndroidBluetoothLeController(
                     BluetoothDevice.PHY_LE_1M
                 )
             else connectGatt(context, false, callback)
-
-            callback.onConnect = { gattResult ->
-                gattResult.onSuccess {
-                    deviceGatt = it
-                    gattCallback = callback
-                    continuation.resumeWith(Result.success(Unit))
-                }.onFailure {
-                    continuation.resumeWith(Result.failure(it))
-                }
-            }
 
             continuation.invokeOnCancellation {
                 gatt.close()
@@ -148,10 +188,31 @@ class AndroidBluetoothLeController(
             address = address
         )
 
-    private open class GattCallback(
-        var onWriteResult: ((Result<Unit>) -> Unit)? = null,
-        var onConnect: ((Result<BluetoothGatt>) -> Unit)? = null
-    ): BluetoothGattCallback() {
+    private class GattCallback: BluetoothGattCallback() {
+
+        fun awaitConnection(block: (Result<BluetoothGatt>) -> Unit) {
+            onConnect = block
+        }
+        fun awaitWriteResult(block: (Result<Unit>) -> Unit) {
+            onWriteResult = block
+        }
+        fun awaitDisconnect(block: () -> Unit) {
+            onDisconnect = block
+        }
+        suspend fun awaitNotifications(uuid: UUID, block: (Result<ByteArray>) -> Unit) {
+            onNotification.collect {
+                it[uuid]?.let {
+                    block(Result.success(it))
+                }
+            }
+        }
+
+        private var onDisconnect: (() -> Unit)? = null
+        private var onConnect: ((Result<BluetoothGatt>) -> Unit)? = null
+        private var onWriteResult: ((Result<Unit>) -> Unit)? = null
+        private var onNotification = MutableStateFlow(
+            mutableMapOf<UUID, ByteArray>()
+        )
 
         override fun onCharacteristicWrite(
             gatt: BluetoothGatt?,
@@ -166,15 +227,30 @@ class AndroidBluetoothLeController(
                     onWriteResult?.invoke(Result.failure(IllegalStateException("Could not write to device")))
                 }
             }
+            onWriteResult = null
+        }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
+            onNotification.update {
+                it.put(characteristic.uuid, value); it
+            }
         }
 
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+        override fun onConnectionStateChange(
+            gatt: BluetoothGatt,
+            status: Int,
+            newState: Int
+        ) {
             when (status) {
-                BluetoothGatt.GATT_SUCCESS -> {
-                }
+                BluetoothGatt.GATT_SUCCESS -> Unit
                 BluetoothGatt.GATT_FAILURE -> {
                     onConnect?.invoke(Result.failure(IllegalStateException("Could not connect to device")))
+                    onConnect = null
                 }
             }
 
@@ -184,7 +260,8 @@ class AndroidBluetoothLeController(
                 }
                 BluetoothGatt.STATE_DISCONNECTED -> {
                     gatt.close()
-                    onConnect?.invoke(Result.failure(IllegalStateException("Could not connect to device")))
+                    onDisconnect?.invoke()
+                    onDisconnect = null
                 }
             }
         }
@@ -198,6 +275,7 @@ class AndroidBluetoothLeController(
                     onConnect?.invoke(Result.failure(IllegalStateException("Could not find services")))
                 }
             }
+            onConnect = null
         }
     }
 

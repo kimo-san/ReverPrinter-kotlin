@@ -1,6 +1,7 @@
 package com.kimo.reverprint.data.bitmaps
 
 import android.graphics.Bitmap
+import kotlinx.coroutines.yield
 import kotlin.math.min
 
 class Pixels(
@@ -36,4 +37,13 @@ class Pixels(
     }
 
     fun getRow(y: Int) = IntArray(width) { x -> get(x, y) }
+
+    suspend fun forEach(block: (p: Pixels, x: Int, y: Int) -> Unit) {
+        repeat(height) { y ->
+            yield()
+            repeat(width) { x ->
+                block(this, x, y)
+            }
+        }
+    }
 }

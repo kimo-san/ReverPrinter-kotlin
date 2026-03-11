@@ -32,17 +32,31 @@ class TinyprintPrinter(
     private val context: Context
 ) : Printer {
 
-    override val connectedTo: MutableStateFlow<ThermalPrinter?> = MutableStateFlow(null)
-    private var pairedToDevice: TinyprintDevice? = null
-    private val protocol: DeviceCommunicationProtocol = TinyprintCommunicationProtocol()
+    private var pairedToDevice = MutableStateFlow<TinyprintDevice?>(null)
+    private val protocol: DeviceCommunicationProtocol = ProtocolImpl()
     private val bluetoothController: BluetoothController by lazy {
         AndroidBluetoothLeController(
             context = context,
-            inputCharacteristic = BleCharacteristic(
+            txCharacteristic = BleCharacteristic(
                 "0000AE01-0000-1000-8000-00805F9B34FB".let(UUID::fromString)
             )
         )
     }
+    override val connectedTo: Flow<ThermalPrinter?> get() = pairedToDevice
+        .filterNotNull()
+        .combine(bluetoothController.connectedToDevice) { pair, dev ->
+            dev?.let {
+                ThermalPrinter(
+                    name = pair.modelNo,
+                    macAddress = dev.address,
+                    supportedModes = buildList {
+                        if (pair.isGrayPrint) add(PrintMode.BPP4)
+                        add(PrintMode.BPP1)
+                    }
+                )
+            }
+        }
+
 
     override fun findAvailable(): Flow<ThermalPrinter> = channelFlow {
 
@@ -60,26 +74,26 @@ class TinyprintPrinter(
 
                 send(
                     ThermalPrinter(
-                    name = modelName,
-                    macAddress = bleDevice.address,
-                    supportedModes = buildList {
-                        if (tpModel.isGrayPrint) add(PrintMode.BPP4)
-                        add(PrintMode.BPP1)
-                    }
-                ))
+                        name = modelName,
+                        macAddress = bleDevice.address,
+                        supportedModes = buildList {
+                            if (tpModel.isGrayPrint) add(PrintMode.BPP4)
+                            add(PrintMode.BPP1)
+                        }
+                    )
+                )
             }.collect()
     }
 
     override suspend fun connect(device: ThermalPrinter) {
         bluetoothController.connect(device.asBluetoothDevice())
-        connectedTo.update { device }
-        pairedToDevice = TinyprintDevice.supportedPrinters[device.name]
+        pairedToDevice.update { TinyprintDevice.supportedPrinters[device.name] }
     }
 
-    override suspend fun generatePreviews(imageBitmap: Bitmap): Printer.PrintPreviews =
+    override suspend fun generatePreviews(imageBitmap: Bitmap, configuration: Printer.Configuration): Printer.PrintPreviews =
         withContext(Dispatchers.Default) {
 
-            val device = pairedToDevice ?: error("Not connected to printer")
+            val device = pairedToDevice.value ?: error("Not connected to printer")
             val previews = mutableMapOf<PrintMode, Bitmap>()
             val printable = mutableMapOf<PrintMode, Pixels>()
 
@@ -90,7 +104,7 @@ class TinyprintPrinter(
                         BitmapSettings(
                             width = device.printSize,
                             colorModel = Monochrome,
-                            dither = false
+                            dither = configuration.ditherImage
                         )
                     ).also { (view, print) ->
                         previews[this] = view
@@ -107,7 +121,7 @@ class TinyprintPrinter(
                         BitmapSettings(
                             width = device.printSize,
                             colorModel = Grey4bpp,
-                            dither = false
+                            dither = configuration.ditherImage
                         )
                     ).also { (view, print) ->
                         previews[this] = view
@@ -117,20 +131,23 @@ class TinyprintPrinter(
                 }
             }
             joinAll()
-            TinyprintPreview(previews, printable)
+            TinyprintPreview(previews, printable, configuration)
         }
 
     override suspend fun print(
         imagePreview: Printer.PrintPreviews,
-        mode: PrintMode,
-        configuration: Printer.PrintConfiguration
+        mode: PrintMode
     ): Unit = withContext(
         Dispatchers.Default + CoroutineExceptionHandler { c, e -> println(e.message) }
     ) {
-        require(pairedToDevice != null)
+        require(pairedToDevice.value != null)
         require(imagePreview is TinyprintPreview)
-        val device = pairedToDevice!!
+        val device = pairedToDevice.value!!
         val bitmap = imagePreview.pixelArrays[mode]
+
+        val readJob = bluetoothController.read().onEach {
+            println("FROM PRINTER: " + it.toHexString())
+        }.launchIn(this)
 
         when (mode) {
 
@@ -170,14 +187,15 @@ class TinyprintPrinter(
             }
         }
 
-        if (configuration.addSpaceAfter)
+        if (imagePreview.appliedConfiguration.addSpaceAfterPrint)
             bluetoothController.send(protocol.feedPaper(120))
+
+        //readJob.cancelAndJoin()
     }
 
     override suspend fun disconnect() {
         bluetoothController.disconnect()
-        connectedTo.update { null }
-        pairedToDevice = null
+        pairedToDevice.update { null }
     }
 
     private fun ThermalPrinter.asBluetoothDevice() = BluetoothDevice(
@@ -188,5 +206,6 @@ class TinyprintPrinter(
     private class TinyprintPreview(
         availableModes: Map<PrintMode, Bitmap>,
         val pixelArrays: Map<PrintMode, Pixels>,
-    ) : Printer.PrintPreviews(availableModes)
+        configuration: Printer.Configuration,
+    ) : Printer.PrintPreviews(availableModes, configuration)
 }
