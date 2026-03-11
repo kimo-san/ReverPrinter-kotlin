@@ -2,7 +2,7 @@ package com.kimo.reverprint.data.tinyprint
 
 interface DeviceCommunicationProtocol {
     fun setMode(mode: Mode): ByteArray
-    fun setEnergy(): ByteArray
+    fun setEnergy(value: Int): ByteArray
     fun setQuality(level: Quality): ByteArray
     fun feedPaper(lines: Int): ByteArray
     fun retractPaper(lines: Int): ByteArray

@@ -16,7 +16,9 @@ import android.os.Build
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 typealias IBluetoothDevice = com.kimo.reverprint.data.bluetooth.BluetoothDevice
@@ -25,7 +27,7 @@ class AndroidBluetoothLeController(
     private val inputCharacteristic: BleCharacteristic?
 ): BluetoothController {
 
-    override var connectedToDevice: IBluetoothDevice? = null
+    override var connectedToDevice = MutableStateFlow<IBluetoothDevice?>(null)
 
     private var deviceGatt: BluetoothGatt? = null
     private val bluetoothAdapter by lazy { context.getSystemService(BluetoothManager::class.java)?.adapter }
@@ -58,7 +60,6 @@ class AndroidBluetoothLeController(
     override suspend fun connect(device: IBluetoothDevice) {
         bluetoothAdapter?.cancelDiscovery()
         bluetoothAdapter?.getRemoteDevice(device.address)?.bluetoothGatt()
-        connectedToDevice = deviceGatt?.device?.toDomain()
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -117,6 +118,21 @@ class AndroidBluetoothLeController(
         suspendCancellableCoroutine { continuation ->
 
             val callback = GattCallback()
+            callback.apply {
+                onDisconnect = {
+                    connectedToDevice.update { null }
+                }
+                onConnect = { gattResult ->
+                    gattResult.onSuccess { gatt ->
+                        deviceGatt = gatt
+                        gattCallback = callback
+                        connectedToDevice.update { gatt.device?.toDomain() }
+                        continuation.resumeWith(Result.success(Unit))
+                    }.onFailure {
+                        continuation.resumeWith(Result.failure(it))
+                    }
+                }
+            }
 
             val gatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 connectGatt(
@@ -125,16 +141,6 @@ class AndroidBluetoothLeController(
                     BluetoothDevice.PHY_LE_1M
                 )
             else connectGatt(context, false, callback)
-
-            callback.onConnect = { gattResult ->
-                gattResult.onSuccess {
-                    deviceGatt = it
-                    gattCallback = callback
-                    continuation.resumeWith(Result.success(Unit))
-                }.onFailure {
-                    continuation.resumeWith(Result.failure(it))
-                }
-            }
 
             continuation.invokeOnCancellation {
                 gatt.close()
@@ -148,10 +154,11 @@ class AndroidBluetoothLeController(
             address = address
         )
 
-    private open class GattCallback(
-        var onWriteResult: ((Result<Unit>) -> Unit)? = null,
+    private open class GattCallback: BluetoothGattCallback() {
+
+        var onDisconnect: (() -> Unit)? = null
         var onConnect: ((Result<BluetoothGatt>) -> Unit)? = null
-    ): BluetoothGattCallback() {
+        var onWriteResult: ((Result<Unit>) -> Unit)? = null
 
         override fun onCharacteristicWrite(
             gatt: BluetoothGatt?,
@@ -171,8 +178,7 @@ class AndroidBluetoothLeController(
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             when (status) {
-                BluetoothGatt.GATT_SUCCESS -> {
-                }
+                BluetoothGatt.GATT_SUCCESS -> Unit
                 BluetoothGatt.GATT_FAILURE -> {
                     onConnect?.invoke(Result.failure(IllegalStateException("Could not connect to device")))
                 }
@@ -184,7 +190,7 @@ class AndroidBluetoothLeController(
                 }
                 BluetoothGatt.STATE_DISCONNECTED -> {
                     gatt.close()
-                    onConnect?.invoke(Result.failure(IllegalStateException("Could not connect to device")))
+                    onDisconnect?.invoke()
                 }
             }
         }

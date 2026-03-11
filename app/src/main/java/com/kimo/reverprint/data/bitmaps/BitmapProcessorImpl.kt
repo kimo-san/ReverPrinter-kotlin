@@ -5,12 +5,13 @@ import androidx.compose.ui.util.fastRoundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class BitmapProcessorImpl : BitmapProcessor {
 
     private lateinit var pixels: Pixels
-    private var settings: BitmapSettings? = null
+    private lateinit var settings: BitmapSettings
 
     override fun setSettings(settings: BitmapSettings) {
         this.settings = settings
@@ -24,9 +25,6 @@ class BitmapProcessorImpl : BitmapProcessor {
     override suspend fun processPixels(): Pixels {
 
         resize(settings?.width, settings?.height)
-        settings?.dither?.takeIf { it }?.let {
-            dither()
-        }
         settings?.colorModel?.let {
             changeColorModel(it)
         }
@@ -37,32 +35,25 @@ class BitmapProcessorImpl : BitmapProcessor {
     suspend fun changeColorModel(newModel: ColorModel) = withContext(Dispatchers.Default) {
         when (newModel) {
             pixels.model -> Unit
-            is Grey4bpp -> {
-                
-                pixels.forEach { p, x, y ->
-                    val lum =
-                        p.model.colorOf(p[x, y]).lum() * (Grey4bpp.channelDepth - 1)
-                    p[x, y] = Grey4bpp.colorOf(lum.roundToInt()).int
-                }
-                
-                require(pixels.arr.all { it in 0..15 })
-                pixels.model = Grey4bpp
-            }
-
             is Monochrome -> {
-
-                val avrLum = pixels.arr.mapIndexed { i, v ->
-                    pixels.model.colorOf(pixels.arr[i]).lum()
-                }.average()
-                
-                pixels.forEach { p, x, y ->
-                    val lum = p.model.colorOf(p[x, y]).lum()
-                    p[x, y] = Monochrome.colorOf(if (lum > avrLum) 1 else 0).int
+                if (settings.dither) {
+                    pixels.toGrey8bpp()
+                    fitToModelUsingDithering(pixels, Monochrome)
+                } else {
+                    pixels.toMonochrome()
                 }
 
-                require(pixels.arr.all { it in 0..1 })
-                pixels.model = Monochrome
             }
+            is Grey8bpp -> pixels.toGrey8bpp()
+            is Grey4bpp -> {
+                if (settings.dither && pixels.model.channelDepth > Grey4bpp.channelDepth) {
+                    pixels.toGrey8bpp()
+                    fitToModelUsingDithering(pixels, Grey4bpp)
+                } else {
+                    pixels.toGrey4bpp()
+                }
+            }
+
 
             is Argb -> {
                 when (pixels.model) {
@@ -97,10 +88,12 @@ class BitmapProcessorImpl : BitmapProcessor {
                             ).int
                         }
                     }
+
                     else -> error("Unsupported")
                 }
                 pixels.model = Argb
             }
+
             else -> error("Unsupported")
         }
     }
@@ -145,72 +138,39 @@ class BitmapProcessorImpl : BitmapProcessor {
         pixels = scaledBitmap
     }
 
-    suspend fun dither(): Unit = withContext(Dispatchers.Default) {
-
-        /* orig color to nearest color */
-        fun lookupTable(model: ColorModel): IntArray {
-
-            val table = IntArray(256)
-            val step = 255f / (model.channelDepth - 1)
-
-            for (v in 0..255) {
-                val index = (v / step).roundToInt()
-                val quant = (index * step).roundToInt()
-                table[v] = quant
-            }
-
-            return table
+    suspend fun fitToModelUsingDithering(
+        pixels: Pixels,
+        newModel: ColorModel
+    ): Unit = withContext(Dispatchers.Default) {
+        require(newModel.channelCount == 1) {
+            "Dithering is currently applicable only for 1-channel colors. Current model is ${pixels.model::class.simpleName}"
         }
 
-        val lookup = lookupTable(pixels.model)
-        fun findClosestColor(color: ColorOfModel): ColorOfModel =
-            color.remappedValues { channel, value -> lookup[value] }
+        val maxLevel = max(newModel.channelDepth - 1, 1)
 
-        fun applyDifference(
-            color: ColorOfModel,
-            errors: IntArray,
-            factor: Float
-        ): ColorOfModel =
-            color.remappedValues { channel, _ ->
-                (color[channel] + errors[channel] * factor).roundToInt()
-            }
-
+        val step = pixels.model.channelDepth / maxLevel
         pixels.forEach { p, x, y ->
 
-            val oldPixel = p.model.colorOf(p[x, y])
-            val newPixel = findClosestColor(oldPixel)
+            val oldPixelValue = p[x, y]
+            val newPixelValue = (oldPixelValue *1f / step).roundToInt() * step
+            val error = oldPixelValue - newPixelValue
 
-            val errorsOnChannels = IntArray(oldPixel.model.channelCount) { oldPixel[it] - newPixel[it] }
-            p[x, y] = newPixel.int
-            p[x + 1, y] = applyDifference(
-                p.model.colorOf(p[x + 1, y]),
-                errorsOnChannels,
-                7f / 16
-            ).int
-            p[x - 1, y + 1] = applyDifference(
-                p.model.colorOf(p[x - 1, y + 1]),
-                errorsOnChannels,
-                3f / 16
-            ).int
-            p[x, y + 1] = applyDifference(
-                p.model.colorOf(p[x, y + 1]),
-                errorsOnChannels,
-                5f / 16
-            ).int
-            p[x + 1, y + 1] = applyDifference(
-                p.model.colorOf(p[x + 1, y + 1]),
-                errorsOnChannels,
-                1f / 16
-            ).int
+            p[x    , y    ] = newPixelValue
+            p[x + 1, y    ] = (p[x + 1, y    ] + error * 7f / 16).toInt()
+            p[x - 1, y + 1] = (p[x - 1, y + 1] + error * 3f / 16).toInt()
+            p[x    , y + 1] = (p[x    , y + 1] + error * 5f / 16).toInt()
+            p[x + 1, y + 1] = (p[x + 1, y + 1] + error * 1f / 16).toInt()
         }
+
+        pixels.forEach { p, x, y ->
+            p[x, y] = (p[x, y] / step).coerceIn(0..maxLevel)
+        }
+
+        pixels.forEach { p, x, y ->
+            if (p[x, y] !in 0..maxLevel) { "Ouf of bounds: ${p[x, y]}".let { println(it) } }
+        }
+        require(pixels.arr.all { it in 0..maxLevel })
+        pixels.model = newModel
     }
 
-    private suspend fun Pixels.forEach(block: (p: Pixels, x: Int, y: Int) -> Unit) {
-        repeat(height) { y ->
-            yield()
-            repeat(width) { x ->
-                block(this, x, y)
-            }
-        }
-    }
 }

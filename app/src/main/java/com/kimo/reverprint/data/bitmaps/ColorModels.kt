@@ -1,5 +1,8 @@
 package com.kimo.reverprint.data.bitmaps
 
+import com.kimo.reverprint.data.bitmaps.Grey4bpp.GrayscaleColor
+import com.kimo.reverprint.data.bitmaps.Grey4bpp.W
+
 object Argb: ColorModel {
 
     override val channelDepth: Int = 256
@@ -41,6 +44,26 @@ object Argb: ColorModel {
     }
 }
 
+object Grey8bpp: ColorModel {
+    override val channelDepth: Int = 256
+    override val channelCount: Int = 1
+    override fun colorOf(intColor: Int): ColorOfModel = Color(intColor)
+    @JvmInline
+    private value class Color(val intValue: Int): ColorOfModel {
+
+        override val model: ColorModel get() = Grey8bpp
+        override fun get(channel: Int) = intValue
+        override val int: Int get() = intValue
+
+        override fun lum(channel: Int): Float = get(channel).toFloat() / model.channelDepth
+        override fun lum(): Float = lum(W)
+
+        override fun remappedValues(block: (Int, Int) -> Int): ColorOfModel {
+            val remap = defRemapImpl(block)
+            return Color(remap[W])
+        }
+    }
+}
 object Grey4bpp: ColorModel {
 
     override val channelDepth: Int = 16

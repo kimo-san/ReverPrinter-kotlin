@@ -4,7 +4,7 @@ import com.kimo.reverprint.data.tinyprint.DeviceCommunicationProtocol.Mode
 import com.lingmoyun.minilzo.MiniLZO
 import kotlin.experimental.or
 
-class TinyprintCommunicationProtocol : DeviceCommunicationProtocol {
+class ProtocolImpl : DeviceCommunicationProtocol {
 
     fun packLength(data: ByteArray): ByteArray = byteArrayOf(
         (data.size and 0xFF).toByte(), ((data.size shr 8) and 0xFF).toByte()
@@ -293,7 +293,9 @@ class TinyprintCommunicationProtocol : DeviceCommunicationProtocol {
     fun compress(data: ByteArray): ByteArray {
         val compressedData = MiniLZO.compress(data)
         return byteArrayOf(
-            *packLength(data), *packLength(compressedData), *compressedData
+            *packLength(data),
+            *packLength(compressedData),
+            *compressedData
         )
     }
 
@@ -306,18 +308,28 @@ class TinyprintCommunicationProtocol : DeviceCommunicationProtocol {
     }
 
     override fun setQuality(level: DeviceCommunicationProtocol.Quality): ByteArray {
-        val code = when (level) {
-            DeviceCommunicationProtocol.Quality.One -> 49.toByte()
-            DeviceCommunicationProtocol.Quality.Two -> 50.toByte()
-            DeviceCommunicationProtocol.Quality.Three -> 51.toByte()
-            DeviceCommunicationProtocol.Quality.Four -> 52.toByte()
-            DeviceCommunicationProtocol.Quality.Five -> 53.toByte()
-        }
-        return formatMessage(0xA4.toByte(), byteArrayOf(code))
+        return formatMessage(
+            0xA4.toByte(),
+            byteArrayOf(
+                when (level) {
+                    DeviceCommunicationProtocol.Quality.One -> 49.toByte()
+                    DeviceCommunicationProtocol.Quality.Two -> 50.toByte()
+                    DeviceCommunicationProtocol.Quality.Three -> 51.toByte()
+                    DeviceCommunicationProtocol.Quality.Four -> 52.toByte()
+                    DeviceCommunicationProtocol.Quality.Five -> 53.toByte()
+                }
+            )
+        )
     }
 
-    override fun setEnergy(): ByteArray {
-        TODO("Not yet implemented")
+    override fun setEnergy(value: Int): ByteArray {
+        return formatMessage(
+            0xAF.toByte(),
+            byteArrayOf(
+                (value.shr(4) and 0xff).toByte(),
+                (value        and 0xff).toByte()
+            )
+        )
     }
 
     override fun feedPaper(lines: Int): ByteArray =
@@ -329,8 +341,14 @@ class TinyprintCommunicationProtocol : DeviceCommunicationProtocol {
     override fun println1bpp(bitmapLine: IntArray): ByteArray =
         formatMessage(0xA2.toByte(), pack1bpp(bitmapLine))
 
-    override fun println4bpp(bitmapLine: IntArray, compress: Boolean): ByteArray =
-        formatMessage(0xCF.toByte(), pack4bpp(bitmapLine).let { if (compress) compress(it) else it })
+    override fun println4bpp(bitmapLine: IntArray, compress: Boolean): ByteArray {
+        return formatMessage(
+            0xCF.toByte(),
+            pack4bpp(bitmapLine).let {
+                if (compress) compress(it) else it
+            }
+        )
+    }
 
     fun pack1bpp(pixels: IntArray): ByteArray {
         require(pixels.all { it == 0 || it == 1 })
@@ -360,18 +378,24 @@ class TinyprintCommunicationProtocol : DeviceCommunicationProtocol {
         // left to right and those pairs inside are ordered from right to left.
         for (currentByte in result.indices) {
 
-            // get pixel pair and convert them to subtractive color model
-            val thisPixel = -(pixels[currentByte * 2] - 15)
+            // get pixel pair and convert it to subtractive color model
+
+            val pixelIndexes = (currentByte * 2) to (currentByte * 2 + 1)
+
+            val thisPixel = -(pixels[pixelIndexes.first] - 15)
             val nextPixel = try {
-                -(pixels[currentByte * 2 + 1] - 15)
+                -(pixels[pixelIndexes.second] - 15)
             } catch (_: IndexOutOfBoundsException) {
                 0x00
             }
 
-            // swap pixel pair inside of the byte
+            // swap pixel pair inside of the byte and paste it to result array
+
             val thisAsBits = (thisPixel and 0x0f).toByte()
             val nextAsBits = (nextPixel shl 4).toByte()
+
             result[currentByte] = thisAsBits or nextAsBits
+
 //            println("INT1: $thisPixel INT2: $nextPixel --- RES: ${result[currentByte].toHexString()} --- BYTE1: ${thisAsBits.toHexString()} BYTE2: ${nextAsBits.toHexString()}")
         }
 //        println(result.joinToString(" ") { it.toHexString() })

@@ -1,4 +1,4 @@
-package com.kimo.reverprint.ui.theme
+package com.kimo.reverprint.presentation.theme
 
 import androidx.compose.ui.graphics.Color
 
