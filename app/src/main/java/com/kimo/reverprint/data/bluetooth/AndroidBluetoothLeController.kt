@@ -6,7 +6,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothStatusCodes
 import android.content.BroadcastReceiver
@@ -15,9 +15,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import androidx.annotation.RequiresPermission
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.update
@@ -27,12 +29,11 @@ import java.util.UUID
 
 typealias IBluetoothDevice = com.kimo.reverprint.data.bluetooth.BluetoothDevice
 
-@Suppress("DEPRECATION")
 class AndroidBluetoothLeController(
     private val context: Context,
     private val txCharacteristic: BleCharacteristic?,
     private val rxCharacteristic: BleCharacteristic?
-): BluetoothController {
+) : BluetoothController {
 
     override var connectedToDevice = MutableStateFlow<IBluetoothDevice?>(null)
 
@@ -80,20 +81,31 @@ class AndroidBluetoothLeController(
     override fun read(): Flow<ByteArray> {
         return callbackFlow {
 
-            val chars = deviceGatt?.services?.flatMap { it.characteristics }?.filterNotNull()
+            val chars = deviceGatt?.services
+                ?.flatMap { it.characteristics }
+                ?.filterNotNull()
+                ?.let {
+                    if (rxCharacteristic != null) it
+                        .filter { it.uuid == rxCharacteristic.uuid }
+                    else it
+                }
 
             chars?.forEach { char ->
                 if (deviceGatt?.setCharacteristicNotification(char, true) == true) {
-                    println("Listening... ${char.uuid}")
-
                     launch {
+
+                        val descriptor = char.getDescriptor(CCCD_UUID.let(UUID::fromString))
+                        descriptor?.value = ENABLE_NOTIFICATION_VALUE
+                        deviceGatt?.writeDescriptor(descriptor)
+
                         gattCallback?.awaitNotifications(char.uuid) {
                             it.getOrNull()?.let { element ->
                                 trySendBlocking(element)
                             }
                         }
                     }
-                }            }
+                }
+            }
 
             awaitClose {
                 chars?.forEach {
@@ -108,17 +120,20 @@ class AndroidBluetoothLeController(
         suspendCancellableCoroutine { continuation ->
 
             deviceGatt
-                ?: continuation.resumeWith(Result.failure(IllegalStateException("Device gatt not found"))).also {
-                    return@suspendCancellableCoroutine
-                }
+                ?: continuation.resumeWith(Result.failure(IllegalStateException("Device gatt not found")))
+                    .also {
+                        return@suspendCancellableCoroutine
+                    }
             gattCallback
-                ?: continuation.resumeWith(Result.failure(IllegalStateException("Gatt callback is not initialized"))).also {
-                    return@suspendCancellableCoroutine
-                }
+                ?: continuation.resumeWith(Result.failure(IllegalStateException("Gatt callback is not initialized")))
+                    .also {
+                        return@suspendCancellableCoroutine
+                    }
             txCharacteristic
-                ?: continuation.resumeWith(Result.failure(IllegalStateException("UUID is not given."))).also {
-                    return@suspendCancellableCoroutine
-                }
+                ?: continuation.resumeWith(Result.failure(IllegalStateException("UUID is not given.")))
+                    .also {
+                        return@suspendCancellableCoroutine
+                    }
 
             val gatt = deviceGatt!!
             val callback = gattCallback!!
@@ -182,36 +197,39 @@ class AndroidBluetoothLeController(
         }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun BluetoothDevice.toDomain() : IBluetoothDevice =
+    fun BluetoothDevice.toDomain(): IBluetoothDevice =
         IBluetoothDevice(
             name = name,
             address = address
         )
 
-    private class GattCallback: BluetoothGattCallback() {
+    private class GattCallback : BluetoothGattCallback() {
 
         fun awaitConnection(block: (Result<BluetoothGatt>) -> Unit) {
             onConnect = block
         }
+
         fun awaitWriteResult(block: (Result<Unit>) -> Unit) {
             onWriteResult = block
         }
+
         fun awaitDisconnect(block: () -> Unit) {
             onDisconnect = block
         }
+
         suspend fun awaitNotifications(uuid: UUID, block: (Result<ByteArray>) -> Unit) {
-            onNotification.collect {
-                it[uuid]?.let {
-                    block(Result.success(it))
-                }
+            notifications.collect { (emitUuid, bytes) ->
+                if (emitUuid == uuid)
+                    block(Result.success(bytes))
             }
         }
 
         private var onDisconnect: (() -> Unit)? = null
         private var onConnect: ((Result<BluetoothGatt>) -> Unit)? = null
         private var onWriteResult: ((Result<Unit>) -> Unit)? = null
-        private var onNotification = MutableStateFlow(
-            mutableMapOf<UUID, ByteArray>()
+        private var notifications = MutableSharedFlow<Pair<UUID, ByteArray>>(
+            replay = REPLAY_BUFFER,
+            onBufferOverflow = BufferOverflow.DROP_LATEST
         )
 
         override fun onCharacteristicWrite(
@@ -223,6 +241,7 @@ class AndroidBluetoothLeController(
                 BluetoothGatt.GATT_SUCCESS -> {
                     onWriteResult?.invoke(Result.success(Unit))
                 }
+
                 BluetoothGatt.GATT_FAILURE -> {
                     onWriteResult?.invoke(Result.failure(IllegalStateException("Could not write to device")))
                 }
@@ -235,9 +254,7 @@ class AndroidBluetoothLeController(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
-            onNotification.update {
-                it.put(characteristic.uuid, value); it
-            }
+            notifications.tryEmit(characteristic.uuid to value)
         }
 
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -258,6 +275,7 @@ class AndroidBluetoothLeController(
                 BluetoothGatt.STATE_CONNECTED -> {
                     gatt.discoverServices()
                 }
+
                 BluetoothGatt.STATE_DISCONNECTED -> {
                     gatt.close()
                     onDisconnect?.invoke()
@@ -271,6 +289,7 @@ class AndroidBluetoothLeController(
                 BluetoothGatt.GATT_SUCCESS -> {
                     onConnect?.invoke(Result.success(gatt))
                 }
+
                 BluetoothGatt.GATT_FAILURE -> {
                     onConnect?.invoke(Result.failure(IllegalStateException("Could not find services")))
                 }
@@ -287,13 +306,20 @@ class AndroidBluetoothLeController(
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 BluetoothDevice.ACTION_FOUND -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                    val device =
+                        intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                     device?.toDomain()?.let(onFound)
                 }
+
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                     onRelease()
                 }
             }
         }
+    }
+
+    companion object {
+        const val CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb"
+        const val REPLAY_BUFFER = 100
     }
 }

@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kimo.reverprint.domain.PrintMode
-import com.kimo.reverprint.domain.Printer
+import com.kimo.reverprint.domain.DeviceController
 import com.kimo.reverprint.domain.ThermalPrinter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -18,14 +18,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MainViewModel(
-    private val printer: Printer
+    private val printer: DeviceController
 ): ViewModel() {
 
     private val scope = CoroutineScope(viewModelScope.coroutineContext.minusKey(Job) + SupervisorJob())
-    var imagePreview = MutableStateFlow<Printer.PrintPreviews?>(null)
+    var imagePreview = MutableStateFlow<DeviceController.PrintPreviews?>(null)
     val device: StateFlow<ThermalPrinter?>
         get() = printer.connectedTo.stateIn(scope, SharingStarted.WhileSubscribed(5000), null)
-    val configuration = Printer.Configuration(
+    val configuration = DeviceController.Configuration(
         addSpaceAfterPrint = true,
         ditherImage = true
     )

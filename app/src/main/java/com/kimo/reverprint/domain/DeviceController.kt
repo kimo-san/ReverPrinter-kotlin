@@ -3,7 +3,7 @@ package com.kimo.reverprint.domain
 import android.graphics.Bitmap
 import kotlinx.coroutines.flow.Flow
 
-interface Printer {
+interface DeviceController {
 
     val connectedTo: Flow<ThermalPrinter?>
     fun findAvailable(): Flow<ThermalPrinter>

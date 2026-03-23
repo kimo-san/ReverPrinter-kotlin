@@ -1,16 +1,26 @@
 package com.kimo.reverprint.data.tinyprint
 
+import com.kimo.reverprint.data.tinyprint.DeviceCommunicationProtocol.DeviceAnswer
 import com.kimo.reverprint.data.tinyprint.DeviceCommunicationProtocol.Mode
 import com.lingmoyun.minilzo.MiniLZO
 import kotlin.experimental.or
 
 class ProtocolImpl : DeviceCommunicationProtocol {
 
-    fun packLength(data: ByteArray): ByteArray = byteArrayOf(
-        (data.size and 0xFF).toByte(), ((data.size shr 8) and 0xFF).toByte()
-    )
+    var deviceGetter: () -> TinyprintDevice? = { null }
+    override fun deviceGetter(newDevice: () -> TinyprintDevice?) {
+        deviceGetter = newDevice
+    }
 
-    fun crc8(data: ByteArray): ByteArray {
+    fun packLength(data: ByteArray): ByteArray {
+        require(data.size <= 0xffff)
+        return byteArrayOf(
+            (data.size and 0xFF).toByte(),
+            ((data.size shr 8) and 0xFF).toByte()
+        )
+    }
+
+    private fun crc8(data: ByteArray): Byte {
         val crc8Table = intArrayOf(
             0x00,
             0x07,
@@ -274,20 +284,36 @@ class ProtocolImpl : DeviceCommunicationProtocol {
             val index = (crc xor (byte.toInt() and 0xFF)) and 0xFF
             crc = crc8Table[index]
         }
-        return byteArrayOf((crc and 0xff).toByte())
+        return (crc and 0xff).toByte()
     }
 
-    fun formatMessage(cmd: Byte, data: ByteArray): ByteArray {
-        return byteArrayOf(
-            0x51.toByte(),
-            0x78.toByte(),
-            cmd,
-            0x00.toByte(),
-            *packLength(data),
-            *data,
-            *crc8(data),
-            0xFF.toByte()
-        )
+    fun formatMessage(cmd: Byte, data: ByteArray): ByteArray = byteArrayOf(
+        *startOfPackageSlice,
+        cmd,
+        0x00.toByte(),
+        *packLength(data),
+        *data,
+        crc8(data),
+        *endOfPackageSlice
+    )
+
+    override fun parseReceivedMessage(message: ByteArray): DeviceAnswer? {
+
+        val messageType = message.withIndex().first {
+            runCatching {
+                message[it.index-2] == startOfPackageSlice[0]
+                        && message[it.index-1] == startOfPackageSlice[1]
+            }.getOrNull() == true
+        }
+        val dataStartIndex = messageType.index + 2 // skip magic number
+        val dataSlice = message.sliceArray(dataStartIndex..message.lastIndex)
+
+        return when (messageType.value) {
+            0xA3.toByte() -> StateImpl(dataSlice)
+            0xAE.toByte() -> IsFullImpl(dataSlice[0] == 0x1.toByte())
+            0xA8.toByte() -> InfoImpl()
+            else -> null
+        }
     }
 
     fun compress(data: ByteArray): ByteArray {
@@ -332,6 +358,9 @@ class ProtocolImpl : DeviceCommunicationProtocol {
         )
     }
 
+    override fun returnState(): ByteArray =
+        formatMessage(0xA3.toByte(), byteArrayOf(0))
+
     override fun feedPaper(lines: Int): ByteArray =
         formatMessage(0xA1.toByte(), byteArrayOf(lines.toByte()))
 
@@ -350,7 +379,7 @@ class ProtocolImpl : DeviceCommunicationProtocol {
         )
     }
 
-    fun pack1bpp(pixels: IntArray): ByteArray {
+    private fun pack1bpp(pixels: IntArray): ByteArray {
         require(pixels.all { it == 0 || it == 1 })
         val result = ByteArray(pixels.size / 8)
         var currentByte = 0
@@ -370,7 +399,7 @@ class ProtocolImpl : DeviceCommunicationProtocol {
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    fun pack4bpp(pixels: IntArray): ByteArray {
+    private fun pack4bpp(pixels: IntArray): ByteArray {
         require(pixels.all { it in 0..15 })
         val result = ByteArray((pixels.size + 1) / 2)
 
@@ -390,15 +419,49 @@ class ProtocolImpl : DeviceCommunicationProtocol {
             }
 
             // swap pixel pair inside of the byte and paste it to result array
-
             val thisAsBits = (thisPixel and 0x0f).toByte()
             val nextAsBits = (nextPixel shl 4).toByte()
-
             result[currentByte] = thisAsBits or nextAsBits
 
 //            println("INT1: $thisPixel INT2: $nextPixel --- RES: ${result[currentByte].toHexString()} --- BYTE1: ${thisAsBits.toHexString()} BYTE2: ${nextAsBits.toHexString()}")
         }
 //        println(result.joinToString(" ") { it.toHexString() })
         return result
+    }
+
+    companion object {
+        val startOfPackageSlice = byteArrayOf(0x51, 0x78)
+        val endOfPackageSlice = byteArrayOf(0xFF.toByte())
+    }
+
+    private inner class InfoImpl: DeviceAnswer.Info
+    private inner class IsFullImpl(override val isFull: Boolean) : DeviceAnswer.IsFull
+    private inner class StateImpl(val data: ByteArray): DeviceAnswer.State {
+        override fun warning(): DeviceAnswer.State.Warning? = when (data[2].toInt() and 0xff) {
+            0x01 -> DeviceAnswer.State.Warning.NO_PAPER
+            0x02 -> DeviceAnswer.State.Warning.OPEN_CLAP
+            0x04 -> DeviceAnswer.State.Warning.OVERHEAT
+            0x08 -> DeviceAnswer.State.Warning.LOW_BATTERY
+            0x10 -> DeviceAnswer.State.Warning.MAGIC_TIP
+            0x80 -> DeviceAnswer.State.Warning.BUSY
+            else -> null
+        }
+        override fun batteryLevel(): Percents? {
+            return when (deviceGetter()?.showElectricityModel) {
+                1 -> {
+                    // я от жизни охуел, когда понял, что оно так должно работать. Пиздец
+                    val raw = data[4].toHexString()
+                        .filter { it.isDigit() }
+                        .toInt()
+                    val level = (raw - 22).coerceIn(0, 6)
+                    level.toFloat() / 6f
+                }
+                2 -> {
+                    val level = data[3].toInt() and 0xff
+                    level.toFloat() / 0xff
+                }
+                else -> null
+            }
+        }
     }
 }
