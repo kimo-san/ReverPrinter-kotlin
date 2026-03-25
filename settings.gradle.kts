@@ -21,4 +21,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Rever Print"
 include(":app")
- 

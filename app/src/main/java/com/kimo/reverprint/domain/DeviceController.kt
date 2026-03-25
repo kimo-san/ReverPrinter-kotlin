@@ -1,6 +1,5 @@
 package com.kimo.reverprint.domain
 
-import android.graphics.Bitmap
 import kotlinx.coroutines.flow.Flow
 
 interface DeviceController {
@@ -11,16 +10,17 @@ interface DeviceController {
     suspend fun disconnect()
 
     suspend fun generatePreviews(
-        imageBitmap: Bitmap,
+        imageBitmap: ImagePixels,
         configuration: Configuration
     ): PrintPreviews
+
     suspend fun print(
         imagePreview: PrintPreviews,
         mode: PrintMode
     )
 
     abstract class PrintPreviews(
-        private val availableModes: Map<PrintMode, Bitmap>,
+        private val availableModes: Map<PrintMode, ImagePixels>,
         val appliedConfiguration: Configuration
     ) { operator fun get(mode: PrintMode) = availableModes[mode] }
 
