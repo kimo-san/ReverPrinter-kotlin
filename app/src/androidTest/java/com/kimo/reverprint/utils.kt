@@ -2,17 +2,15 @@ package com.kimo.reverprint
 
 import android.Manifest
 import android.content.Context
-import android.graphics.Color
 import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.kimo.reverprint.androidData.AndroidBluetoothLeController
-import com.kimo.reverprint.domain.ColorModel
-import com.kimo.reverprint.domain.ImagePixels
-import com.kimo.reverprint.tools.bitmaps.MutablePixels
-import com.kimo.reverprint.useCases.tinyprint.TinyprintController
-import com.kimo.reverprint.useCases.tinyprint.units.ProtocolImpl
+import com.kimo.reverprint.interactors.tinyprint.DeviceCommunicationProtocol
+import com.kimo.reverprint.interactors.tinyprint.TinyprintController
+import com.kimo.reverprint.interactors.tinyprint.units.ProtocolImpl
+import com.kimo.reverprint.tools.bluetooth.BluetoothLeController
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
@@ -30,11 +28,9 @@ abstract class TinyprintTestWrapper {
     companion object {
 
         private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
-        val protocol = ProtocolImpl()
-        val bluetoothController = AndroidBluetoothLeController(context)
+        val protocol: DeviceCommunicationProtocol = ProtocolImpl()
+        val bluetoothController: BluetoothLeController = AndroidBluetoothLeController(context)
         val controller: TinyprintController = TinyprintController(bluetoothController, protocol)
-
-        val testBitmap get() = createTestBitmap(100)
 
         @JvmStatic
         @BeforeClass
@@ -64,23 +60,4 @@ abstract class TinyprintTestWrapper {
             controller.disconnect()
         }
     }
-}
-
-
-@Suppress("SameParameterValue")
-private fun createTestBitmap(size: Int): ImagePixels = runBlocking {
-
-    val pixels = MutablePixels(
-        pixelsArray = IntArray(size * size),
-        width = size,
-        height = size,
-        model = ColorModel.ARGB_8
-    )
-
-    pixels.forEach { p, x, y ->
-        val isBlack = (x + y) % 2 == 0
-        p[x, y] = if (isBlack) Color.BLACK else Color.WHITE
-    }
-
-    pixels
 }

@@ -1,14 +1,16 @@
-package com.kimo.reverprint.useCases.tinyprint
+package com.kimo.reverprint.interactors.tinyprint
+
+import com.kimo.reverprint.interactors.tinyprint.units.TinyprintDevice
 
 /**
- * Интерфейс, чтобы просто генерализировать свод доступных комманд
+ * Интерфейс, чтобы генерализировать свод доступных комманд
  */
 interface DeviceCommunicationProtocol {
 
-    fun deviceGetter(newDevice: () -> TinyprintDevice?)
+    fun deviceGetter(newDevice: () -> TinyprintDevice)
 
     fun setMode(mode: Mode): ByteArray
-    fun setEnergy(value: Int): ByteArray
+    fun setEnergy(concentration: Int): ByteArray
     fun setQuality(level: Quality): ByteArray
     fun feedPaper(lines: Int): ByteArray
     fun retractPaper(lines: Int): ByteArray

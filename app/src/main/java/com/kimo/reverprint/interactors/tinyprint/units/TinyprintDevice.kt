@@ -1,4 +1,4 @@
-package com.kimo.reverprint.useCases.tinyprint
+package com.kimo.reverprint.interactors.tinyprint.units
 
 /**
  * Copy-pasted class `PrinterModel.Databean` from decompiled apk with multiple constructors.
@@ -6,6 +6,7 @@ package com.kimo.reverprint.useCases.tinyprint
  * Most of parameters is not used in this project at all, but if some bug occurs your
  * printer, at least, you can to find some specific specs of your model.
  */
+@Suppress("UNUSED")
 data class TinyprintDevice(
     val isGrayPrint: Boolean = false,
     val grayThinEneragy: Int = 0,
@@ -7119,13 +7120,13 @@ data class TinyprintDevice(
     }
 
     private object Shape {
-        const val MASTER_DPI = 576;
+        const val MASTER_DPI = 576
     }
     private object PDLayoutAttributeObject {
         const val GLYPH_ORIENTATION_VERTICAL_ZERO_DEGREES: String = "0"
     }
     private object AccessibilityNodeInfoCompat {
-        const val EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_MAX_LENGTH = 20000;
+        const val EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_MAX_LENGTH = 20000
     }
     private object OS2WindowsMetricsTable {
         const val WEIGHT_CLASS_EXTRA_BOLD: Int = 800

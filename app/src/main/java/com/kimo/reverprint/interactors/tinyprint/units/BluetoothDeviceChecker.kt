@@ -1,7 +1,7 @@
-package com.kimo.reverprint.useCases.tinyprint.units
+package com.kimo.reverprint.interactors.tinyprint.units
 
-import com.kimo.reverprint.useCases.tinyprint.DeviceChecker
-import com.kimo.reverprint.useCases.tinyprint.DeviceCommunicationProtocol
+import com.kimo.reverprint.interactors.tinyprint.DeviceChecker
+import com.kimo.reverprint.interactors.tinyprint.DeviceCommunicationProtocol
 import com.kimo.reverprint.tools.bluetooth.BluetoothController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,7 +23,7 @@ class BluetoothDeviceChecker(
         .map { it.isFull }
         .stateIn(scope, SharingStarted.Companion.Eagerly, false)
 
-    override suspend fun suspendIfOverloaded() {
+    override suspend fun suspendIfNeeded() {
         if (isFull.value) isFull
             .also { println("BluetoothDeviceChecker: Suspending...") }
             .filter { !it }

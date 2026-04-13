@@ -1,30 +1,35 @@
-package com.kimo.reverprint.useCases.tinyprint
+package com.kimo.reverprint.interactors.tinyprint
 
 import com.kimo.reverprint.domain.DeviceController
 import com.kimo.reverprint.domain.ImagePixels
 import com.kimo.reverprint.domain.PrintMode
 import com.kimo.reverprint.domain.ThermalPrinter
-import com.kimo.reverprint.useCases.tinyprint.units.BluetoothDeviceChecker
-import com.kimo.reverprint.useCases.tinyprint.units.PreviewGenerator
-import com.kimo.reverprint.useCases.tinyprint.units.Printer
+import com.kimo.reverprint.interactors.tinyprint.units.BluetoothDeviceChecker
+import com.kimo.reverprint.interactors.tinyprint.units.PreviewGenerator
+import com.kimo.reverprint.interactors.tinyprint.units.Printer
+import com.kimo.reverprint.interactors.tinyprint.units.TinyprintDevice
 import com.kimo.reverprint.tools.bluetooth.BleCharacteristic
 import com.kimo.reverprint.tools.bluetooth.BluetoothDevice
 import com.kimo.reverprint.tools.bluetooth.BluetoothLeController
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 
 class TinyprintController(
     val bluetoothController: BluetoothLeController,
     val protocol: DeviceCommunicationProtocol
 ) : DeviceController {
 
-    init {
-        bluetoothController.setReadCharacteristic(BleCharacteristic(READ_UUID))
-        bluetoothController.setWriteCharacteristic(BleCharacteristic(WRITE_UUID))
-        protocol.deviceGetter { pairedToDevice.value }
-    }
-
     private var pairedToDevice = MutableStateFlow<TinyprintDevice?>(null)
+    private val deviceGetter =
+        { pairedToDevice.value ?: error("Disconnected from device...") }
 
     override val connectedTo: Flow<ThermalPrinter?> get() = pairedToDevice
         .filterNotNull()
@@ -42,8 +47,13 @@ class TinyprintController(
         }
 
     override suspend fun connect(device: ThermalPrinter) {
-        bluetoothController.connect(device.asBluetoothDevice())
+        bluetoothController.apply {
+            connect(device.asBluetoothDevice())
+            setReadCharacteristic(BleCharacteristic(READ_UUID))
+            setWriteCharacteristic(BleCharacteristic(WRITE_UUID))
+        }
         pairedToDevice.update { TinyprintDevice.supportedPrinters[device.name] }
+        protocol.deviceGetter(deviceGetter)
     }
 
     override suspend fun disconnect() {
@@ -76,11 +86,11 @@ class TinyprintController(
 
     override suspend fun generatePreviews(
         imageBitmap: ImagePixels,
-        configuration: DeviceController.Configuration
+        printConfig: DeviceController.PrintConfig
     ): DeviceController.PrintPreviews {
-        return PreviewGenerator(
-            device = pairedToDevice.value ?: error("Disconnected from device...")
-        ).generate(imageBitmap, configuration)
+        val result = PreviewGenerator(deviceGetter)
+            .generate(imageBitmap, printConfig)
+        return result
     }
 
     override suspend fun print(
@@ -88,10 +98,10 @@ class TinyprintController(
         mode: PrintMode
     ) = coroutineScope {
         Printer(
-            getPairedDevice = { pairedToDevice.value ?: error("Disconnected from device...") },
+            deviceGetter = deviceGetter,
             protocol = protocol,
             sendBytes = { bluetoothController.send(it) },
-            getDeviceChecker = { BluetoothDeviceChecker(this, bluetoothController, protocol) },
+            deviceChecker = { BluetoothDeviceChecker(this, bluetoothController, protocol) },
         ).print(imagePreview, mode)
     }
 

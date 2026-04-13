@@ -11,7 +11,7 @@ interface DeviceController {
 
     suspend fun generatePreviews(
         imageBitmap: ImagePixels,
-        configuration: Configuration
+        printConfig: PrintConfig
     ): PrintPreviews
 
     suspend fun print(
@@ -21,10 +21,10 @@ interface DeviceController {
 
     abstract class PrintPreviews(
         private val availableModes: Map<PrintMode, ImagePixels>,
-        val appliedConfiguration: Configuration
+        val appliedPrintConfig: PrintConfig
     ) { operator fun get(mode: PrintMode) = availableModes[mode] }
 
-    class Configuration(
+    class PrintConfig(
         val addSpaceAfterPrint: Boolean = true,
         val ditherImage: Boolean = false
     )

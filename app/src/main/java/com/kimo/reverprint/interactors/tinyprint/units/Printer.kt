@@ -1,22 +1,23 @@
-package com.kimo.reverprint.useCases.tinyprint.units
+package com.kimo.reverprint.interactors.tinyprint.units
 
 import com.kimo.reverprint.domain.ColorModel
 import com.kimo.reverprint.domain.DeviceController
 import com.kimo.reverprint.domain.ImagePixels
 import com.kimo.reverprint.domain.PrintMode
-import com.kimo.reverprint.useCases.tinyprint.DeviceChecker
-import com.kimo.reverprint.useCases.tinyprint.DeviceCommunicationProtocol
-import com.kimo.reverprint.useCases.tinyprint.PrintPreview
-import com.kimo.reverprint.useCases.tinyprint.TinyprintDevice
+import com.kimo.reverprint.interactors.tinyprint.DeviceChecker
+import com.kimo.reverprint.interactors.tinyprint.DeviceCommunicationProtocol
+import com.kimo.reverprint.interactors.tinyprint.PrintPreview
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class Printer(
-    val getPairedDevice: () -> TinyprintDevice,
+    val deviceGetter: () -> TinyprintDevice,
     val sendBytes: suspend (ByteArray) -> Unit,
-    val getDeviceChecker: () -> DeviceChecker,
+    val deviceChecker: () -> DeviceChecker,
     val protocol: DeviceCommunicationProtocol
 ) {
 
@@ -26,8 +27,8 @@ class Printer(
     ) = withContext(Dispatchers.Default) {
 
         require(imagePreview is PrintPreview)
-        val device = getPairedDevice()
-        val checker = getDeviceChecker()
+        val device = deviceGetter()
+        val checker = deviceChecker()
         val bitmap = imagePreview.imagePixels[mode]
 
         require(bitmap != null)
@@ -36,7 +37,7 @@ class Printer(
             PrintMode.BPP1 -> print1bpp(checker, bitmap)
         }
 
-        if (imagePreview.appliedConfiguration.addSpaceAfterPrint)
+        if (imagePreview.appliedPrintConfig.addSpaceAfterPrint)
             sendBytes(protocol.feedPaper(120))
     }
 
@@ -49,16 +50,24 @@ class Printer(
         require(bitmap.model == ColorModel.GREY_4BPP)
         sendBytes(protocol.setMode(DeviceCommunicationProtocol.Mode.GREY_IMG))
         sendBytes(protocol.setQuality(DeviceCommunicationProtocol.Quality.Five))
+        sendBytes(protocol.setEnergy(1))
 
+        var loseCounter = 0
         repeat(bitmap.height) { y ->
-            checker.suspendIfOverloaded()
+            checker.suspendIfNeeded()
             print("Line $y (max: ${bitmap.height - 1})")
-            sendBytes(protocol.println4bpp(bitmap.row(y), device.usesCompressionForGreyScale))
-            println(" - sent")
+            loseOnTimeout(
+                durationInMillis = 50,
+                onLose = { println("...lost!"); loseCounter++ }
+            ) {
+                sendBytes(protocol.println4bpp(bitmap.row(y), device.usesCompressionForGreyScale))
+                println("...sent!")
+            }
             if (y % device.blockCountForGreyPrint == 0) {
                 delay(device.grayImageSpeed.toLong())
             }
         }
+        println("Lost: $loseCounter of ${bitmap.height}")
     }
 
     private suspend fun print1bpp(
@@ -70,10 +79,36 @@ class Printer(
         sendBytes(protocol.setMode(DeviceCommunicationProtocol.Mode.MONO_IMG))
         sendBytes(protocol.setQuality(DeviceCommunicationProtocol.Quality.Five))
 
+        var loseCounter = 0
         repeat(bitmap.height) { y ->
-            checker.suspendIfOverloaded()
-            println("Line $y (max: ${bitmap.height - 1})")
-            sendBytes(protocol.println1bpp(bitmap.row(y)))
+            checker.suspendIfNeeded()
+            print("Line $y (max: ${bitmap.height - 1})...")
+
+            loseOnTimeout(
+                durationInMillis = 50,
+                onLose = { println("...lost!"); loseCounter++ }
+            ) {
+                sendBytes(protocol.println1bpp(bitmap.row(y)))
+                println("...done!")
+            }
         }
+        println("Lost: $loseCounter of ${bitmap.height}")
+    }
+
+    private suspend fun loseOnTimeout(
+        durationInMillis: Long,
+        onLose: () -> Unit,
+        todo: suspend () -> Unit
+    ) = coroutineScope {
+        val worker = launch {
+            todo()
+        }
+        val watchdog = launch {
+            delay(durationInMillis)
+            worker.cancelAndJoin()
+            onLose()
+        }
+        worker.join()
+        watchdog.cancelAndJoin()
     }
 }
