@@ -1,6 +1,6 @@
 package com.kimo.reverprint
 
-import com.kimo.reverprint.useCases.tinyprint.DeviceCommunicationProtocol
+import com.kimo.reverprint.interactors.tinyprint.DeviceCommunicationProtocol
 import com.kimo.reverprint.domain.DeviceController
 import com.kimo.reverprint.domain.PrintMode
 import kotlinx.coroutines.cancelAndJoin
@@ -21,6 +21,13 @@ class RealTinyprintTests : TinyprintTestWrapper() {
     @Test
     fun testDeviceDiscovery(): Unit = runTest {
         controller.bluetoothController.discovery().first()
+    }
+
+    @Test
+    fun testEnergyRegulation() {
+        protocol.setEnergy(7).also {
+            println(it.toHexString())
+        }
     }
 
     @Test
@@ -76,10 +83,10 @@ class RealTinyprintTests : TinyprintTestWrapper() {
             .launchIn(this)
 
         val previews = controller.generatePreviews(
-            imageBitmap = testBitmap,
-            configuration = DeviceController.Configuration(
-                addSpaceAfterPrint = true,
-                ditherImage = true
+            imageBitmap = createGradientBitmap(100, 20),
+            printConfig = DeviceController.PrintConfig(
+                addSpaceAfterPrint = false,
+                ditherImage = false
             )
         )
         controller.print(previews, PrintMode.BPP4)
@@ -94,8 +101,8 @@ class RealTinyprintTests : TinyprintTestWrapper() {
             .launchIn(this)
 
         val previews = controller.generatePreviews(
-            imageBitmap = testBitmap,
-            configuration = DeviceController.Configuration(
+            imageBitmap = createChessBitmap(100, 20, 2),
+            printConfig = DeviceController.PrintConfig(
                 addSpaceAfterPrint = true,
                 ditherImage = true
             )
