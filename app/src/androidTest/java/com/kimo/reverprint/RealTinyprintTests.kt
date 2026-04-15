@@ -1,7 +1,7 @@
 package com.kimo.reverprint
 
-import com.kimo.reverprint.interactors.tinyprint.DeviceCommunicationProtocol
-import com.kimo.reverprint.domain.DeviceController
+import com.kimo.reverprint.providers.tinyprint.DeviceProtocol
+import com.kimo.reverprint.domain.DeviceManager
 import com.kimo.reverprint.domain.PrintMode
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterNotNull
@@ -19,45 +19,53 @@ class RealTinyprintTests : TinyprintTestWrapper() {
     fun findsDevice(): Unit = runTest { controller.findAvailable().first() }
 
     @Test
-    fun testDeviceDiscovery(): Unit = runTest {
-        controller.bluetoothController.discovery().first()
+    fun testDeviceDiscovery(): Unit = runBlocking {
+        bluetoothController.discovery().first()
     }
 
     @Test
     fun testEnergyRegulation() {
-        protocol.setEnergy(7).also {
+        controller.protocol.setEnergy(7).also {
             println(it.toHexString())
         }
     }
 
     @Test
-    fun testTinyprintInput() = runTest {
-        controller.bluetoothController.send(
-            controller.protocol.feedPaper(10)
-        )
-        controller.bluetoothController.send(
-            controller.protocol.retractPaper(10)
-        )
+    fun testBasicIO() = runBlocking {
+
+        controller.deviceController.stream {
+            send(
+                controller.protocol.feedPaper(10)
+            )
+            send(
+                controller.protocol.retractPaper(10)
+            )
+        }
     }
 
     @Test
-    fun testIO() = runTest {
+    fun testIO() = runBlocking {
 
         val command = controller.protocol.requestState()
-        val expectedMessageType = DeviceCommunicationProtocol.DeviceAnswer.State::class
+        val expectedMessageType = DeviceProtocol.DeviceAnswer.State::class
 
-        controller.bluetoothController.send(command)
-        val answer: DeviceCommunicationProtocol.DeviceAnswer = controller.bluetoothController.read()
-            .map { controller.protocol.parseReceivedMessage(it) }
-            .filterNotNull()
-            .onEach { println("Parsed: $it") }
-            .first()
+        controller.deviceController.stream {
+            send(command)
+            val answer: DeviceProtocol.DeviceAnswer = read()
+                .map { controller.protocol.parseReceivedMessage(it) }
+                .filterNotNull()
+                .onEach { println("Parsed upper level: $it") }
+                .first()
+            assert(expectedMessageType.isInstance(answer))
+            println("Assertions succeed")
+        }
+        println(".. end exited")
 
-        assert(expectedMessageType.isInstance(answer))
+
     }
 
     @Test
-    fun testProtocolOn_x6h_model(): Unit = runTest {
+    fun testProtocolOn_x6h_model(): Unit = runBlocking {
 
         val (data1, exp1) = intArrayOf(
             0x51, 0x78, 0xa3, 0x01, 0x03, 0x00, 0x00, 0x04, 0x24, 0xa8, 0xff
@@ -67,24 +75,24 @@ class RealTinyprintTests : TinyprintTestWrapper() {
         ).map { it.toByte() }.toByteArray() to 1f
 
         data1.let(controller.protocol::parseReceivedMessage)
-            .let { it as DeviceCommunicationProtocol.DeviceAnswer.State }
+            .let { it as DeviceProtocol.DeviceAnswer.State }
             .also { assert(it.batteryLevel() == exp1) }
 
         data2.let(controller.protocol::parseReceivedMessage)
-            .let { it as DeviceCommunicationProtocol.DeviceAnswer.State }
+            .let { it as DeviceProtocol.DeviceAnswer.State }
             .also { assert(it.batteryLevel() == exp2) }
     }
 
     @Test
     fun print4bppPicture(): Unit = runBlocking {
 
-        val readJob = controller.bluetoothController.read()
+        val readJob = bluetoothController.read()
             .onEach { println("READ MESSAGE IN TEST: ${it.toHexString()}") }
             .launchIn(this)
 
         val previews = controller.generatePreviews(
             imageBitmap = createGradientBitmap(100, 20),
-            printConfig = DeviceController.PrintConfig(
+            printConfig = DeviceManager.PrintConfig(
                 addSpaceAfterPrint = false,
                 ditherImage = false
             )
@@ -96,13 +104,13 @@ class RealTinyprintTests : TinyprintTestWrapper() {
     @Test
     fun print1bppPicture(): Unit = runBlocking {
 
-        val readJob = controller.bluetoothController.read()
+        val readJob = bluetoothController.read()
             .onEach { println("READ MESSAGE IN TEST: ${it.toHexString()}") }
             .launchIn(this)
 
         val previews = controller.generatePreviews(
             imageBitmap = createChessBitmap(100, 20, 2),
-            printConfig = DeviceController.PrintConfig(
+            printConfig = DeviceManager.PrintConfig(
                 addSpaceAfterPrint = true,
                 ditherImage = true
             )

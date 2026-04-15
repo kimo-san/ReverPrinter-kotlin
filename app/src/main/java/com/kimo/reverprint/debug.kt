@@ -1,8 +1,8 @@
 package com.kimo.reverprint
 
 import com.kimo.reverprint.domain.ImagePixels
-import com.kimo.reverprint.interactors.bitmapPlayground.Argb8
-import com.kimo.reverprint.interactors.bitmapPlayground.asDomainImmutable
+import com.kimo.reverprint.tools.graphics.Argb8
+import com.kimo.reverprint.interactors.bitmaps.asDomainImmutable
 import com.kimo.reverprint.tools.graphics.ColorModel
 import com.kimo.reverprint.tools.graphics.Pixels
 import kotlinx.coroutines.runBlocking

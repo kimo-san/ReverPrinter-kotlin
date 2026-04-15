@@ -6,10 +6,8 @@ import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
-import com.kimo.reverprint.androidData.AndroidBluetoothLeController
-import com.kimo.reverprint.interactors.tinyprint.DeviceCommunicationProtocol
-import com.kimo.reverprint.interactors.tinyprint.TinyprintController
-import com.kimo.reverprint.interactors.tinyprint.units.ProtocolImpl
+import com.kimo.reverprint.android.data.AndroidBluetoothLeController
+import com.kimo.reverprint.providers.tinyprint.TinyprintManager
 import com.kimo.reverprint.tools.bluetooth.BluetoothLeController
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -28,9 +26,8 @@ abstract class TinyprintTestWrapper {
     companion object {
 
         private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
-        val protocol: DeviceCommunicationProtocol = ProtocolImpl()
         val bluetoothController: BluetoothLeController = AndroidBluetoothLeController(context)
-        val controller: TinyprintController = TinyprintController(bluetoothController, protocol)
+        val controller: TinyprintManager = TinyprintManager(bluetoothController)
 
         @JvmStatic
         @BeforeClass
