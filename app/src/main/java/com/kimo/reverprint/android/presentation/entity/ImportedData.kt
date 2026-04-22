@@ -1,4 +1,4 @@
-package com.kimo.reverprint.android.presentation
+package com.kimo.reverprint.android.presentation.entity
 
 import android.graphics.Bitmap
 

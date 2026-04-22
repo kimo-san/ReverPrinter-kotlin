@@ -1,4 +1,4 @@
-package com.kimo.reverprint.domain
+package com.kimo.reverprint.domain.images
 
 class BitmapSettings(
     val dither: Boolean = false,

@@ -1,5 +1,4 @@
-package com.kimo.reverprint.domain
-
+package com.kimo.reverprint.domain.printer
 
 data class ThermalPrinter(
     val name: String,

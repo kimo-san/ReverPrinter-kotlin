@@ -3,20 +3,22 @@ package com.kimo.reverprint.android.presentation
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kimo.reverprint.android.presentation.entity.UserImagePreferences
+import com.kimo.reverprint.android.presentation.entity.UserPrintPreferences
 import com.kimo.reverprint.android.toImagePixels
-import com.kimo.reverprint.domain.DeviceManager
-import com.kimo.reverprint.domain.PrintMode
-import com.kimo.reverprint.domain.ThermalPrinter
+import com.kimo.reverprint.domain.printer.DeviceManager
+import com.kimo.reverprint.domain.printer.PrintMode
+import com.kimo.reverprint.domain.printer.ThermalPrinter
 import com.kimo.reverprint.tools.fonts.ColorSettings
 import com.kimo.reverprint.tools.fonts.Font
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Monochrome
-import com.kimo.reverprint.interactors.bitmaps.generateImageWithText
-import com.kimo.reverprint.interactors.bitmaps.BitmapTextConfig
+import com.kimo.reverprint.domain.images.BitmapTextConfig
+import com.kimo.reverprint.domain.images.TextOnBitmapGenerator
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,11 +26,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class MainViewModel(
-    private val controller: DeviceManager,
-    private val font: Font
+    private val deviceManager: DeviceManager,
+    private val font: Font,
+    private val textGen: TextOnBitmapGenerator
 ) : ViewModel() {
 
     private val scope = viewModelScope
@@ -41,16 +45,16 @@ class MainViewModel(
     private val _imagePreview =
         MutableStateFlow<DeviceManager.PrintPreviews?>(null)
 
-    val device: StateFlow<ThermalPrinter?>
-        get() = controller.connectedTo.stateIn(scope, SharingStarted.WhileSubscribed(5000), null)
+    val device: StateFlow<ThermalPrinter?> = deviceManager.connectedTo
+        .stateIn(scope, SharingStarted.WhileSubscribed(5000), null)
 
 
     private var currentPreviewJob: Job? = null
     private fun runPreviewJob(
         block: suspend CoroutineScope.() -> Unit
-    ) = scope.launch {
+    ) = scope.launch(Dispatchers.IO) {
         _loadingPreview.value = true
-        currentPreviewJob?.cancelAndJoin()
+        currentPreviewJob?.cancel()
         currentPreviewJob = launch {
             block()
             _loadingPreview.value = false
@@ -58,10 +62,10 @@ class MainViewModel(
     }
 
     fun findAndConnect() = scope.launch {
-        loop@ while (true) {
+        loop@ while (isActive) {
             runCatching {
-                val device = controller.findAvailable().first()
-                controller.connect(device)
+                val device = deviceManager.findAvailable().first()
+                deviceManager.connect(device)
                 break@loop
             }
         }
@@ -69,29 +73,33 @@ class MainViewModel(
 
     fun setPreview(
         text: String,
-        prefs: UserPrintPreferences
-    ): Job = runPreviewJob {
+        imagePrefs: UserImagePreferences,
+        printPrefs: UserPrintPreferences
+    ) = runPreviewJob {
 
-        val img = generateImageWithText(
+        val deviceCaps = device.value!!.capabilities
+
+        val fntSize = imagePrefs.fontSize.coerceIn(1, deviceCaps.printWidth)
+        val img = textGen.generatePixels(
             text, BitmapTextConfig(
-                width = 400,
-                letterHeight = 50,
-                lineSpacing = 6,
+                width = deviceCaps.printWidth,
+                letterHeight = fntSize,
+                lineSpacing = 0,
                 letterSpacing = 0,
                 colors = ColorSettings(
                     model = Monochrome,
                     foreground = Color(0x0),
-                    background = Color(0xf)
+                    background = Color(0x1)
                 ),
                 font = font
             )
         )
 
         _imagePreview.update {
-            controller.generatePreviews(
+            deviceManager.generatePreviews(
                 img, DeviceManager.PrintConfig(
-                    addSpaceAfterPrint = prefs.addSpaceAfterPrint,
-                    ditherImage = prefs.dither
+                    addSpaceAfterPrint = printPrefs.addSpaceAfterPrint,
+                    ditherImage = imagePrefs.dither
                 )
             )
         }
@@ -99,14 +107,15 @@ class MainViewModel(
 
     fun setPreview(
         image: Bitmap,
-        prefs: UserPrintPreferences
+        imagePrefs: UserImagePreferences,
+        printPrefs: UserPrintPreferences
     ) = runPreviewJob {
         _imagePreview.update {
-            controller.generatePreviews(
+            deviceManager.generatePreviews(
                 image.toImagePixels(),
                 DeviceManager.PrintConfig(
-                    addSpaceAfterPrint = prefs.addSpaceAfterPrint,
-                    ditherImage = prefs.dither
+                    addSpaceAfterPrint = printPrefs.addSpaceAfterPrint,
+                    ditherImage = imagePrefs.dither
                 )
             )
         }
@@ -114,7 +123,7 @@ class MainViewModel(
 
     fun print(mode: PrintMode) = scope.launch {
         _imagePreview.value?.let {
-            controller.print(it, mode)
+            deviceManager.print(it, mode)
         } ?: println("preview is not provided")
     }
 

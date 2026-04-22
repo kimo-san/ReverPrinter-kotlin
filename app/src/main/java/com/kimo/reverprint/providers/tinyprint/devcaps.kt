@@ -3,7 +3,7 @@ package com.kimo.reverprint.providers.tinyprint
 /**
  * Copy-pasted class `PrinterModel.Databean` from decompiled apk with multiple constructors.
  *
- * Most of parameters is not used in this project at all, but if some bugs occur your
+ * The most of parameters is not used in this project at all, but if some bugs occur your
  * device, at least, you can to find here some specific specs of your model.
  */
 @Suppress("UNUSED")

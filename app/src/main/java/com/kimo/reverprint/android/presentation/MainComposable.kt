@@ -57,9 +57,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.kimo.reverprint.android.presentation.entity.ImportedData
+import com.kimo.reverprint.android.presentation.entity.UserImagePreferences
+import com.kimo.reverprint.android.presentation.entity.UserPrintPreferences
 import com.kimo.reverprint.android.toAndroidBitmap
-import com.kimo.reverprint.domain.PrintMode
-import com.kimo.reverprint.domain.ThermalPrinter
+import com.kimo.reverprint.domain.printer.PrintMode
+import com.kimo.reverprint.domain.printer.ThermalPrinter
 import org.koin.androidx.compose.koinViewModel
 
 enum class InputMode { IMAGE, TEXT }
@@ -90,33 +93,32 @@ fun MainComposable(importedData: ImportedData?) {
             Modifier.padding(pdd)
         ) {
 
-            var currentPrefs: UserPrintPreferences? by remember { mutableStateOf(null) }
+            var currentImagePrefs by remember { mutableStateOf(UserImagePreferences.default) }
+            var currentPrintPrefs by remember { mutableStateOf(UserPrintPreferences.default) }
             var showingMode by remember { mutableStateOf(PrintMode.BPP1) }
+            var currentText by remember { mutableStateOf(importedData?.text) }
+            var currentImage by remember { mutableStateOf(importedData?.image) }
 
-            val generateTextPreview = { text: String ->
-                viewModel.setPreview(
-                    text = text,
-                    prefs = currentPrefs ?: UserPrintPreferences.default
-                )
-            }
-            val generateBitmapPreview = { image: Bitmap ->
-                viewModel.setPreview(
-                    image = image,
-                    prefs = currentPrefs ?: UserPrintPreferences.default
-                )
-            }
-            val imagePicker = userPicturePicker { image ->
-                viewModel.setPreview(
-                    image = image,
-                    prefs = currentPrefs ?: UserPrintPreferences.default
-                )
-            }
+            LaunchedEffect(currentImage, currentText, currentImagePrefs, currentPrintPrefs) {
 
-            LaunchedEffect(importedData) {
-                if (importedData?.text != null)
-                    generateTextPreview(importedData.text)
-                if (importedData?.image != null)
-                    generateBitmapPreview(importedData.image)
+                val image = currentImage
+                val text = currentText
+
+                if (text != null) {
+                    println("Preview for $text")
+                    viewModel.setPreview(
+                        text = text,
+                        imagePrefs = currentImagePrefs,
+                        printPrefs = currentPrintPrefs
+                    )
+                } else if (image != null) {
+                    println("Preview for img")
+                    viewModel.setPreview(
+                        image = image,
+                        imagePrefs = currentImagePrefs,
+                        printPrefs = currentPrintPrefs
+                    )
+                }
             }
 
             PrinterScreen(
@@ -126,15 +128,30 @@ fun MainComposable(importedData: ImportedData?) {
                     ?.asImageBitmap(),
                 loadingPreview = viewModel.loadingPreview.collectAsState().value,
                 device = device!!,
-                onPickImage = { imagePicker.invoke() },
-                onSetText = { generateTextPreview(it) },
+                onPickImage = pickImageByUser {
+                    currentImage = it
+                    currentText = null
+                },
+                onSetText = {
+                    currentText = it
+                    currentImage = null
+                },
                 onPrint = { viewModel.print(showingMode) },
-                applyPreferences = { newPrefs ->
-                    if (currentPrefs?.copy(mode = newPrefs.mode) == newPrefs)
-                        showingMode = newPrefs.mode
-                    else {
-                        currentPrefs = newPrefs
+                applyPreferences = { imgPrefs, printPrefs ->
+
+                    when (imgPrefs) {
+                        currentImagePrefs -> {
+                            Unit
+                        }
+                        currentImagePrefs.copy(mode = imgPrefs.mode) -> {
+                            showingMode = imgPrefs.mode
+                        }
+                        else -> {
+                            currentImagePrefs = imgPrefs
+                        }
                     }
+
+                    currentPrintPrefs = printPrefs
                 }
             )
         }
@@ -149,7 +166,7 @@ fun PrinterScreen(
     preview: ImageBitmap?,
     onPickImage: () -> Unit,
     onSetText: (String) -> Unit,
-    applyPreferences: (UserPrintPreferences) -> Unit,
+    applyPreferences: (UserImagePreferences, UserPrintPreferences) -> Unit,
     onPrint: () -> Unit
 ) {
     var inputMode by remember { mutableStateOf(InputMode.IMAGE) }
@@ -157,14 +174,19 @@ fun PrinterScreen(
     var addSpace by remember { mutableStateOf(true) }
     var dither by remember { mutableStateOf(true) }
     var density by remember { mutableFloatStateOf(4f) }
+    var fontSize by remember { mutableFloatStateOf(0.2f) }
 
-    LaunchedEffect(imageMode, density, addSpace, dither) {
+    LaunchedEffect(imageMode, density, addSpace, dither, fontSize) {
         applyPreferences(
-            UserPrintPreferences(
+            UserImagePreferences(
                 dither = dither,
                 mode = imageMode,
+                fontSize = (fontSize * device.capabilities.printWidth)
+                    .toInt().coerceIn(1..device.capabilities.printWidth),
+            ),
+            UserPrintPreferences(
                 paperDensity = density.toInt(),
-                addSpaceAfterPrint = addSpace
+                addSpaceAfterPrint = addSpace,
             )
         )
     }
@@ -178,14 +200,14 @@ fun PrinterScreen(
     ) {
 
         // ---- INPUT MODE ----
-        Text("Источник")
+        Text("Source")
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
                 selected = inputMode == InputMode.IMAGE,
                 onClick = { inputMode = InputMode.IMAGE }
             )
-            Text("Изображение")
+            Text("Image")
 
             Spacer(Modifier.width(16.dp))
 
@@ -193,17 +215,19 @@ fun PrinterScreen(
                 selected = inputMode == InputMode.TEXT,
                 onClick = { inputMode = InputMode.TEXT }
             )
-            Text("Текст")
+            Text("Text")
         }
 
-        // ---- PRINT MODE ----
-        Text("Режим печати")
+        Spacer(Modifier.height(16.dp))
 
+        // ---- PRINT MODE ----
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
+            Text("Print mode")
+            Spacer(Modifier.weight(1f))
             device.capabilities.supportedModes.forEach {
                 RadioButton(
                     selected = imageMode == it,
@@ -217,21 +241,31 @@ fun PrinterScreen(
         Spacer(Modifier.height(16.dp))
 
         // ---- ADD SPACE AFTER PRINT ----
-        Text("Вытянуть бумагу для отрыва")
-
-        Switch(addSpace, { addSpace = it })
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Feed some paper after print")
+            Switch(addSpace, { addSpace = it })
+        }
 
         Spacer(Modifier.height(16.dp))
 
         // ---- DITHER ----
-        Text("Применить дизеринг")
-
-        Switch(dither, { dither = it })
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Dither image: ")
+            Switch(dither, { dither = it })
+        }
 
         Spacer(Modifier.height(16.dp))
 
         // ---- DENSITY ----
-        Text("Плотность бумаги: ${density.toInt()}")
+        Text("Paper density: ${density.toInt()}")
 
         Slider(
             value = density,
@@ -246,13 +280,15 @@ fun PrinterScreen(
         ContentInput(
             selectedMode = inputMode,
             pickImage = { onPickImage() },
-            setText = { onSetText(it) }
+            setText = { onSetText(it) },
+            fontSize = fontSize,
+            setFontSize = { fontSize = it },
         )
 
         Spacer(Modifier.height(16.dp))
 
         // ---- PREVIEW ----
-        Text("Предпросмотр")
+        Text("Preview")
 
         Box(
             modifier = Modifier
@@ -271,7 +307,7 @@ fun PrinterScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.FillWidth
                     ) else
-                    Text("Preview is not available yet")
+                    Text("The preview is not available yet")
         }
 
         Spacer(Modifier.weight(1f))
@@ -282,7 +318,7 @@ fun PrinterScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-        ) { Text("ПЕЧАТАТЬ") }
+        ) { Text("PRINT") }
     }
 }
 
@@ -290,13 +326,15 @@ fun PrinterScreen(
 fun ContentInput(
     selectedMode: InputMode,
     pickImage: () -> Unit,
-    setText: (String) -> Unit
+    setText: (String) -> Unit,
+    fontSize: Float,
+    setFontSize: (Float) -> Unit
 ) = when (selectedMode) {
     InputMode.IMAGE -> {
         Button(
             onClick = pickImage,
             modifier = Modifier.fillMaxWidth()
-        ) { Text("Выбрать изображение") }
+        ) { Text("Pick image") }
     }
 
     InputMode.TEXT -> {
@@ -308,7 +346,13 @@ fun ContentInput(
                 setText(text)
             },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Введите текст...") }
+            placeholder = { Text("Enter the text...") }
+        )
+
+        Text("Font size")
+        Slider(
+            value = fontSize,
+            onValueChange = { setFontSize(it) },
         )
     }
 }
@@ -343,7 +387,7 @@ private fun DeviceHandler(viewModel: MainViewModel) {
                         .aspectRatio(1f)
                 )
                 Text(
-                    "Connecting to your printer...",
+                    "Searching your printer...",
                     Modifier.padding(8.dp),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
@@ -360,7 +404,7 @@ private fun DeviceHandler(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun userPicturePicker(
+private fun pickImageByUser(
     applyToImage: (Bitmap) -> Unit
 ): () -> Unit {
 

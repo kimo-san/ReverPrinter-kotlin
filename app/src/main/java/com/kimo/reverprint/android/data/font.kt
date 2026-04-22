@@ -12,10 +12,17 @@ import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.tools.fonts.Font
 import com.kimo.reverprint.tools.fonts.FontParameters
 import com.kimo.reverprint.tools.fonts.Glyph
-import com.kimo.reverprint.interactors.bitmaps.Pixels
+import com.kimo.reverprint.extensions.bitmaps.create
+import com.kimo.reverprint.tools.graphics.BitmapCreator
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
+import java.util.HashMap
+import java.util.concurrent.ConcurrentHashMap
 
+// todo: remove runBlocking calls
 class LoadedFontImpl(
-    private val context: Context
+    private val context: Context,
+    private val bitmapCreator: BitmapCreator
 ): Font {
 
     fun loadTypeface(): Typeface {
@@ -23,7 +30,7 @@ class LoadedFontImpl(
     }
 
     private val typeface = loadTypeface()
-    fun drawGlyph(
+    suspend fun drawGlyph(
         char: Char,
         height: Int,
         backgroundArgbColor: Int,
@@ -52,13 +59,13 @@ class LoadedFontImpl(
             paint
         )
 
-        return Glyph(Pixels(bitmap.toImagePixels()))
+        return Glyph(bitmapCreator.create(bitmap.toImagePixels()))
     }
 
     override fun getBitmapOfChar(
         char: Char,
         parameters: FontParameters
-    ): Glyph = buffer.getGlyph(char, parameters)
+    ): Glyph = runBlocking { buffer.getGlyph(char, parameters) }
 
     private val buffer = ParametrizedGlyphBuffer { char, parms ->
         drawGlyph(
@@ -72,26 +79,22 @@ class LoadedFontImpl(
 }
 
 private class ParametrizedGlyphBuffer (
-    private val getNewItem: (Char, FontParameters) -> Glyph
+    private val getNewItem: suspend (Char, FontParameters) -> Glyph
 ) {
 
-    private var currentParameters: FontParameters? = null
-    private var buffer = mutableMapOf<Char, Glyph>()
+    private var buffer = ConcurrentHashMap<FontParameters, HashMap<Char, Glyph>>()
 
-    fun getGlyph(
+    suspend fun getGlyph(
         char: Char,
         parameters: FontParameters
     ): Glyph {
-
-        if (parameters != currentParameters) {
-            buffer = mutableMapOf()
-            currentParameters = parameters
+        yield()
+        return buffer.computeIfAbsent(parameters) {
+            hashMapOf()
+        }.computeIfAbsent(char) {
+            runBlocking {
+                getNewItem(char, parameters)
+            }
         }
-
-        if (buffer[char] == null) {
-            buffer[char] = getNewItem(char, parameters)
-        }
-
-        return buffer[char]!!
     }
 }

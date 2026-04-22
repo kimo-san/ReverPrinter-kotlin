@@ -1,24 +1,35 @@
-package com.kimo.reverprint.interactors.bitmaps
+package com.kimo.reverprint.tools.graphics
 
 import com.kimo.reverprint.name
-import com.kimo.reverprint.rowsAreSame
-import com.kimo.reverprint.tools.graphics.Argb8
-import com.kimo.reverprint.tools.graphics.ColorModel
-import com.kimo.reverprint.tools.graphics.Grey4
-import com.kimo.reverprint.tools.graphics.Grey8
-import com.kimo.reverprint.tools.graphics.Monochrome
-import com.kimo.reverprint.tools.graphics.Pixels
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import kotlin.math.max
 import kotlin.math.roundToInt
+
+
+suspend inline fun Pixels.forEach(block: (p: Pixels, x: Int, y: Int) -> Unit) {
+    repeat(height) { y ->
+        yield()
+        repeat(width) { x ->
+            block(this, x, y)
+        }
+    }
+}
+
+suspend inline fun Pixels.fullFill(color: Color) {
+    forEach { p, x, y ->
+        p[x, y] = color
+    }
+}
 
 /**
  * The only function, which returns a new resized pixel array
  */
-suspend fun Pixels.resized(
+suspend fun Pixels.resizedCopy(
     setWidth: Int?,
-    setHeight: Int?
+    setHeight: Int?,
+    creator: BitmapCreator
 ): Pixels = withContext(Dispatchers.Default) {
 
     val (originalWidth, originalHeight) = width to height
@@ -37,27 +48,23 @@ suspend fun Pixels.resized(
         }
 
         else -> {
-            newWidth = setWidth ?: return@withContext this@resized.getCopy()
-            newHeight = setHeight ?: return@withContext this@resized.getCopy()
+            newWidth = setWidth ?: return@withContext this@resizedCopy.getCopy()
+            newHeight = setHeight ?: return@withContext this@resizedCopy.getCopy()
         }
     }
 
-
-    println("Pixels.resized ${colorModel.name} All were same: " + rowsAreSame(50,51,100))
-    val scaledBitmap = Pixels(
-        pixelsArray = IntArray(newWidth * newHeight),
+    val scaledBitmap = creator.create(
         width = newWidth,
         height = newHeight,
         colorModel = colorModel
     )
     val (scaleX, scaleY) = (originalWidth.toFloat() / newWidth) to (originalHeight.toFloat() / newHeight)
     scaledBitmap.forEach { p, x, y ->
-        p[x, y] = this@resized[
+        p[x, y] = this@resizedCopy[
             (x * scaleX).toInt(),
             (y * scaleY).toInt()
         ]
     }
-    println("Pixels.resized ${scaledBitmap.colorModel.name} All are same: " + scaledBitmap.rowsAreSame(50,51,100))
 
     scaledBitmap
 }
@@ -67,8 +74,6 @@ suspend fun changeColorModel(
     pixels: Pixels,
     dither: Boolean
 ) = withContext(Dispatchers.Default) {
-
-    println("changeColorModel ${pixels.colorModel.name} All were same: " + pixels.rowsAreSame(50,51,100))
 
     when (newModel) {
         pixels.colorModel -> Unit
@@ -96,8 +101,6 @@ suspend fun changeColorModel(
 
         else -> error("Unsupported color model ${newModel::class.simpleName}")
     }
-
-    println("changeColorModel ${pixels.colorModel.name} All are same: " + pixels.rowsAreSame(50,51,100))
 }
 
 suspend fun Pixels.insertPixels(
@@ -105,20 +108,13 @@ suspend fun Pixels.insertPixels(
     startX: Int,
     startY: Int,
 ) {
-    val maxX = width
-    val maxY = height
     newPixels.forEach { p, x, y ->
-
-        val placedX = x + startX
-        val placedY = y + startY
-
-        if (placedY < maxY && placedX < maxX)
-            this[placedX, placedY] = colorModel.fromModel(p[x, y], p.colorModel)
+        this[x + startX, y + startY] = colorModel.fromModel(p[x, y], p.colorModel)
     }
 }
 
 /**
- * Algorithm by Floyd Steinberg
+ * Floyd Steinberg Algorithm
  */
 private suspend fun fitToModelUsingDithering(
     pixels: Pixels,
@@ -137,9 +133,9 @@ private suspend fun fitToModelUsingDithering(
         val newPixelValue = (oldPixelValue * 1f / step).roundToInt() * step
         val error = oldPixelValue - newPixelValue
 
-        p[x    , y    ] = p.colorModel.colorOf(newPixelValue)
-        p[x + 1, y    ] = p.colorModel.colorOf((p[x + 1, y    ].int + (error * 7f / 16)).toInt())
-        p[x    , y + 1] = p.colorModel.colorOf((p[x    , y + 1].int + (error * 5f / 16)).toInt())
+        p[x, y] = p.colorModel.colorOf(newPixelValue)
+        p[x + 1, y] = p.colorModel.colorOf((p[x + 1, y].int + (error * 7f / 16)).toInt())
+        p[x, y + 1] = p.colorModel.colorOf((p[x, y + 1].int + (error * 5f / 16)).toInt())
         p[x - 1, y + 1] = p.colorModel.colorOf((p[x - 1, y + 1].int + (error * 3f / 16)).toInt())
         p[x + 1, y + 1] = p.colorModel.colorOf((p[x + 1, y + 1].int + (error * 1f / 16)).toInt())
     }

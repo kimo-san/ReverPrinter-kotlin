@@ -1,27 +1,30 @@
-package com.kimo.reverprint.interactors.bitmaps
+package com.kimo.reverprint.extensions.bitmaps
 
-import com.kimo.reverprint.domain.ImagePixels
+import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.tools.graphics.Argb8
+import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Grey4
 import com.kimo.reverprint.tools.graphics.Grey8
 import com.kimo.reverprint.tools.graphics.Monochrome
 import com.kimo.reverprint.tools.graphics.Pixels
+import com.kimo.reverprint.tools.graphics.BitmapCreator
+import com.kimo.reverprint.tools.graphics.forEach
 
-private typealias DomainColorModel = com.kimo.reverprint.domain.ColorModel
+private typealias DomainColorModel = com.kimo.reverprint.domain.images.ColorModel
 private typealias ImplementedColorModel = com.kimo.reverprint.tools.graphics.ColorModel
 
-fun Pixels(
-    pixels: ImagePixels
-): Pixels {
-    val model = pixels.model.implementedEquivalent()
-    return Pixels(
+suspend fun BitmapCreator.create(pixels: ImagePixels): Pixels {
+    val copy = create(
         pixels.width,
         pixels.height,
-        model,
-        IntArray(pixels.height * pixels.width) {
-            model.colorOf(pixels.pixelList[it]).int
-        },
+        pixels.model.implementedEquivalent()
     )
+    copy.forEach { p, x, y ->
+        p[x, y] = Color(
+            pixels.pixelList[y * pixels.width + x]
+        )
+    }
+    return copy
 }
 
 fun Pixels.asDomainImmutable() =

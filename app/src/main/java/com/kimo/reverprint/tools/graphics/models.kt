@@ -103,7 +103,9 @@ object Monochrome : ColorModel {
     override val channelDepth: Int = 1
     override val channelCount: Int = 1
 
-    override fun colorOf(intColor: Int): Color = Color(intColor)
+    override fun colorOf(
+        intColor: Int
+    ): Color = Color(intColor and 0x1)
 
     override fun fromModel(sourceColor: Color, model: ColorModel): Color =
         Color(model.lumOf(sourceColor).roundToInt())

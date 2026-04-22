@@ -1,16 +1,17 @@
 package com.kimo.reverprint
 
-import com.kimo.reverprint.domain.ImagePixels
+import com.kimo.reverprint.data.pixels.RamBitmapCreator
+import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.tools.graphics.Argb8
-import com.kimo.reverprint.interactors.bitmaps.asDomainImmutable
+import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
 import com.kimo.reverprint.tools.graphics.ColorModel
-import com.kimo.reverprint.tools.graphics.Pixels
+import com.kimo.reverprint.tools.graphics.forEach
 import kotlinx.coroutines.runBlocking
 
 fun createGradientBitmap(height: Int, width: Int): ImagePixels = runBlocking {
 
-    val pixels = Pixels(
-        pixelsArray = IntArray(height * width),
+    val cr = RamBitmapCreator()
+    val pixels = cr.create(
         height = height,
         width = width,
         colorModel = Argb8
@@ -27,8 +28,8 @@ fun createGradientBitmap(height: Int, width: Int): ImagePixels = runBlocking {
 
 fun createChessBitmap(height: Int, width: Int, gradations: Int): ImagePixels = runBlocking {
 
-    val pixels = Pixels(
-        pixelsArray = IntArray(height * width),
+    val cr = RamBitmapCreator()
+    val pixels = cr.create(
         height = height,
         width = width,
         colorModel = Argb8
@@ -59,6 +60,7 @@ fun present(arr: IntArray, breakAvery: Int) {
 
 val ColorModel.name get() = this::class.simpleName
 
+/*
 fun Pixels.rowsAreSame(vararg rows: Int): Boolean {
     return runCatching {
         rows.map { pixelList.slice(width * it..width * it + width) }
@@ -67,3 +69,4 @@ fun Pixels.rowsAreSame(vararg rows: Int): Boolean {
             .size == 1
     }.getOrElse { false }
 }
+*/

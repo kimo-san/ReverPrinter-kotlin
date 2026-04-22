@@ -1,5 +1,6 @@
-package com.kimo.reverprint.domain
+package com.kimo.reverprint.domain.printer
 
+import com.kimo.reverprint.domain.images.ImagePixels
 import kotlinx.coroutines.flow.Flow
 
 interface DeviceManager {
