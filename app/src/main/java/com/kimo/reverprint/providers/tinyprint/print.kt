@@ -1,9 +1,9 @@
 package com.kimo.reverprint.providers.tinyprint
 
-import com.kimo.reverprint.domain.ColorModel
-import com.kimo.reverprint.domain.DeviceManager
-import com.kimo.reverprint.domain.ImagePixels
-import com.kimo.reverprint.domain.PrintMode
+import com.kimo.reverprint.domain.images.ColorModel
+import com.kimo.reverprint.domain.printer.DeviceManager
+import com.kimo.reverprint.domain.images.ImagePixels
+import com.kimo.reverprint.domain.printer.PrintMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope

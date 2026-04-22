@@ -1,20 +1,22 @@
 package com.kimo.reverprint.providers.tinyprint
 
-import com.kimo.reverprint.domain.DeviceManager
-import com.kimo.reverprint.domain.ImagePixels
-import com.kimo.reverprint.domain.PrintMode
-import com.kimo.reverprint.domain.ThermalPrinter
-import com.kimo.reverprint.tools.bluetooth.BluetoothLeController
+import com.kimo.reverprint.domain.printer.DeviceManager
+import com.kimo.reverprint.domain.images.ImagePixels
+import com.kimo.reverprint.domain.printer.PrintMode
+import com.kimo.reverprint.domain.printer.ThermalPrinter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 class TinyprintManager(
-    bluetoothController: BluetoothLeController
+    val deviceController: TinyprintBluetoothController,
+    val previewGenerator: PreviewGenerator
 ) : DeviceManager {
 
-    val deviceController = TinyprintBluetoothController(bluetoothController)
-    val protocol get() = deviceController.protocol
     private val deviceGetter: () -> ThermalPrinter =
         { deviceController.pairedDevice.value ?: error("Disconnected from device...") }
+
+    val protocol get() = deviceController.protocol
 
     override val connectedTo: Flow<ThermalPrinter?>
         get() = deviceController.pairedDevice
@@ -31,18 +33,16 @@ class TinyprintManager(
     override suspend fun generatePreviews(
         imageBitmap: ImagePixels,
         printConfig: DeviceManager.PrintConfig
-    ): DeviceManager.PrintPreviews {
-        return PreviewGenerator(deviceGetter)
-            .generate(imageBitmap, printConfig)
+    ): DeviceManager.PrintPreviews = withContext(Dispatchers.Default) {
+        previewGenerator.generate(imageBitmap, printConfig, deviceGetter)
     }
 
     override suspend fun print(
         imagePreview: DeviceManager.PrintPreviews,
         mode: PrintMode
     ) = deviceController.stream {
-        println("Start printing...")
         TinyprintPrinter(
-            protocol = deviceController.protocol,
+            protocol = protocol,
             sendBytes = { send(it) }
         ).print(imagePreview, mode)
     }

@@ -1,4 +1,4 @@
-package com.kimo.reverprint.domain
+package com.kimo.reverprint.domain.printer
 
 data class PrinterCapabilities(
     val printWidth: Int,

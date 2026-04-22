@@ -1,8 +1,8 @@
 package com.kimo.reverprint
 
 import com.kimo.reverprint.providers.tinyprint.DeviceProtocol
-import com.kimo.reverprint.domain.DeviceManager
-import com.kimo.reverprint.domain.PrintMode
+import com.kimo.reverprint.domain.printer.DeviceManager
+import com.kimo.reverprint.domain.printer.PrintMode
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first

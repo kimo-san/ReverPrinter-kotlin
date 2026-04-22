@@ -1,8 +1,8 @@
 package com.kimo.reverprint.providers.tinyprint
 
-import com.kimo.reverprint.domain.PrintMode
-import com.kimo.reverprint.domain.PrinterCapabilities
-import com.kimo.reverprint.domain.ThermalPrinter
+import com.kimo.reverprint.domain.printer.PrintMode
+import com.kimo.reverprint.domain.printer.PrinterCapabilities
+import com.kimo.reverprint.domain.printer.ThermalPrinter
 import com.kimo.reverprint.tools.bluetooth.BluetoothLeCharacteristic
 import com.kimo.reverprint.tools.bluetooth.BluetoothController
 import com.kimo.reverprint.tools.bluetooth.BluetoothDevice
