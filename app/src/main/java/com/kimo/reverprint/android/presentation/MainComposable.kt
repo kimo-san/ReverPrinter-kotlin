@@ -93,65 +93,70 @@ fun MainComposable(importedData: ImportedData?) {
             Modifier.padding(pdd)
         ) {
 
-            var currentImagePrefs by remember { mutableStateOf(UserImagePreferences.default) }
-            var currentPrintPrefs by remember { mutableStateOf(UserPrintPreferences.default) }
-            var showingMode by remember { mutableStateOf(PrintMode.BPP1) }
-            var currentText by remember { mutableStateOf(importedData?.text) }
-            var currentImage by remember { mutableStateOf(importedData?.image) }
+            var appliedImagePrefs by remember { mutableStateOf(UserImagePreferences.default) }
+            var appliedPrintPrefs by remember { mutableStateOf(UserPrintPreferences.default) }
+            var showingText by remember { mutableStateOf<String?>(null) }
+            var showingImage by remember { mutableStateOf<Bitmap?>(null) }
 
-            LaunchedEffect(currentImage, currentText, currentImagePrefs, currentPrintPrefs) {
-
-                val image = currentImage
-                val text = currentText
-
-                if (text != null) {
-                    println("Preview for $text")
+            LaunchedEffect(appliedImagePrefs, showingImage, showingText) {
+                showingImage?.let {
                     viewModel.setPreview(
-                        text = text,
-                        imagePrefs = currentImagePrefs,
-                        printPrefs = currentPrintPrefs
+                        image = it,
+                        imagePrefs = appliedImagePrefs,
+                        printPrefs = appliedPrintPrefs
                     )
-                } else if (image != null) {
-                    println("Preview for img")
+                }
+                showingText?.let {
                     viewModel.setPreview(
-                        image = image,
-                        imagePrefs = currentImagePrefs,
-                        printPrefs = currentPrintPrefs
+                        text = it,
+                        imagePrefs = appliedImagePrefs,
+                        printPrefs = appliedPrintPrefs
                     )
                 }
             }
 
+            fun txt(text: String) {
+                showingImage = null
+                showingText = text
+            }
+
+            fun img(image: Bitmap) {
+                showingText = null
+                showingImage = image
+            }
+
+            LaunchedEffect(Unit) {
+                importedData?.apply {
+                    image?.let { img(it) }
+                    text?.let { txt(it) }
+                }
+            }
+
+            var showingMode by remember { mutableStateOf(PrintMode.BPP1) }
+
+            var newImagePrefs by remember { mutableStateOf(UserImagePreferences.default) }
+            LaunchedEffect(newImagePrefs) {
+
+                if (appliedImagePrefs.mode != newImagePrefs.mode) {
+                    showingMode = newImagePrefs.mode
+                }
+
+                appliedImagePrefs = newImagePrefs
+            }
+
             PrinterScreen(
                 preview = viewModel.imagePreview.collectAsState().value
-                    ?.get(showingMode)
+                    ?.get()
                     ?.toAndroidBitmap()
                     ?.asImageBitmap(),
                 loadingPreview = viewModel.loadingPreview.collectAsState().value,
                 device = device!!,
-                onPickImage = pickImageByUser {
-                    currentImage = it
-                    currentText = null
-                },
-                onSetText = {
-                    currentText = it
-                    currentImage = null
-                },
+                onPickImage = pickImageByUser { img(it) },
+                onSetText = { txt(it) },
                 onPrint = { viewModel.print(showingMode) },
                 applyPreferences = { imgPrefs, printPrefs ->
-
-                    when (imgPrefs) {
-                        currentImagePrefs -> {
-                            Unit
-                        }
-                        currentImagePrefs.copy(mode = imgPrefs.mode) -> {
-                            showingMode = imgPrefs.mode
-                        }
-                        else -> {
-                            currentImagePrefs = imgPrefs
-                        }
-                    }
-
-                    currentPrintPrefs = printPrefs
+                    newImagePrefs = imgPrefs
+                    appliedPrintPrefs = printPrefs
                 }
             )
         }

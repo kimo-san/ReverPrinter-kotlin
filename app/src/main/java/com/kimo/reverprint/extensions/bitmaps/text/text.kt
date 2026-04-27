@@ -1,8 +1,7 @@
-package com.kimo.reverprint.extensions.bitmaps
+package com.kimo.reverprint.extensions.bitmaps.text
 
-import com.kimo.reverprint.domain.images.BitmapTextConfig
 import com.kimo.reverprint.domain.images.ImagePixels
-import com.kimo.reverprint.domain.images.TextOnBitmapGenerator
+import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
 import com.kimo.reverprint.tools.fonts.FontParameters
 import com.kimo.reverprint.tools.graphics.BitmapCreator
 import com.kimo.reverprint.tools.graphics.Pixels

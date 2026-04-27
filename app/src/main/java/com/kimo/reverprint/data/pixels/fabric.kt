@@ -13,6 +13,7 @@ interface MonomodeFabric
 class BitmapFabric(createFile: () -> File): BitmapCreator {
 
     val raf = RafBitmapCreator(createFile)
+    val mapRaf = MappedRafBitmapCreator(createFile)
     val ram = RamBitmapCreator()
 
     override suspend fun create(
@@ -25,5 +26,10 @@ class BitmapFabric(createFile: () -> File): BitmapCreator {
         width: Int,
         colorModel: ColorModel
     ): Pixels = raf.create(width, 0, colorModel)
+
+    override suspend fun createFastExtendable(
+        width: Int,
+        colorModel: ColorModel
+    ): Pixels = mapRaf.create(width, colorModel)
 
 }

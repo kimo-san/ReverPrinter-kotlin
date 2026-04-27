@@ -43,7 +43,7 @@ class TinyprintManager(
     ) = deviceController.stream {
         TinyprintPrinter(
             protocol = protocol,
-            sendBytes = { send(it) }
+            sender = { send(it) }
         ).print(imagePreview, mode)
     }
 }

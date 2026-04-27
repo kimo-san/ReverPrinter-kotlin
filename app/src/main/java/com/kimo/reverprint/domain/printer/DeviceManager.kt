@@ -21,12 +21,13 @@ interface DeviceManager {
     )
 
     abstract class PrintPreviews(
-        private val availableModes: Map<PrintMode, ImagePixels>,
+        private val img: ImagePixels,
         val appliedPrintConfig: PrintConfig
-    ) { operator fun get(mode: PrintMode) = availableModes[mode] }
+    ) { fun get() = img }
 
     class PrintConfig(
         val addSpaceAfterPrint: Boolean = true,
-        val ditherImage: Boolean = false
+        val ditherImage: Boolean = false,
+        val mode: PrintMode
     )
 }

@@ -13,7 +13,30 @@ import com.kimo.reverprint.tools.graphics.forEach
 private typealias DomainColorModel = com.kimo.reverprint.domain.images.ColorModel
 private typealias ImplementedColorModel = com.kimo.reverprint.tools.graphics.ColorModel
 
-suspend fun BitmapCreator.create(pixels: ImagePixels): Pixels {
+fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
+    println("Doing...!")
+
+    println("Width: " + pixels.width)
+    println("Height: " + pixels.height)
+    println("Model: " + pixels.model)
+    println("Size: " + pixels.pixelList.size)
+    println("Max y: " + (pixels.pixelList.size / pixels.width))
+
+    println("This pixels have: $width, $height")
+
+    for (y in 0..<pixels.height) {
+        println("Line y index = " + y + ". Max y index: " + (pixels.height))
+        for (x in 0..<pixels.width) {
+            val pxl = pixels.pixelList[y * pixels.width + x]
+            this[x, y] = Color(pxl)
+        }
+    }
+
+    println("Done!")
+    return this
+}
+
+suspend fun BitmapCreator.from(pixels: ImagePixels): Pixels {
     val copy = create(
         pixels.width,
         pixels.height,

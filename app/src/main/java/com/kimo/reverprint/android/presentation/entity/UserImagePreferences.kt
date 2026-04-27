@@ -6,7 +6,9 @@ data class UserImagePreferences(
     val dither: Boolean,
     val mode: PrintMode,
     val fontSize: Int
-) {
+)
+
+{
     companion object {
         val default = UserImagePreferences(
             dither = true,

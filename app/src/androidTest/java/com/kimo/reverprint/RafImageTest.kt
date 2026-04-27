@@ -4,9 +4,9 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kimo.reverprint.data.pixels.BitmapFabric
-import com.kimo.reverprint.domain.images.BitmapTextConfig
-import com.kimo.reverprint.extensions.bitmaps.TextOnBitmapGeneratorImpl
-import com.kimo.reverprint.extensions.bitmaps.create
+import com.kimo.reverprint.extensions.bitmaps.text.BitmapTextConfig
+import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGeneratorImpl
+import com.kimo.reverprint.extensions.bitmaps.from
 import com.kimo.reverprint.extensions.bitmaps.implementedEquivalent
 import com.kimo.reverprint.tools.fonts.ColorSettings
 import com.kimo.reverprint.tools.fonts.Font
@@ -35,7 +35,7 @@ class RafImageTest {
         println("Created file: " + file.createNewFile())
 
         val creator = BitmapFabric(crFile)
-        val sourcePixels = creator.create(createChessBitmap(100, 100, 2))
+        val sourcePixels = creator.from(createChessBitmap(100, 100, 2))
         println(file.readText())
 
         println("Attempting to write into file...")
@@ -74,7 +74,7 @@ class RafImageTest {
                     font = BaseFont()
                 )
             )
-            val px1 = creator.create(px)
+            val px1 = creator.from(px)
             present(px1.pixelList, px1.width)
 
             val f2 = File(context.filesDir, "saved_bitmap_2_2.bin")
@@ -101,9 +101,7 @@ class BaseFont: Font {
 
     val gph = runBlocking {
         Glyph(
-            BitmapFabric {
-                error("slop")
-            }.create(createChessBitmap(4, 4, 2))
+            BitmapFabric { error("slop") }.from(createChessBitmap(4, 4, 2))
         )
     }
 }

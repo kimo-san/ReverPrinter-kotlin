@@ -5,11 +5,11 @@ import com.kimo.reverprint.android.presentation.MainViewModel
 import com.kimo.reverprint.android.data.AndroidBluetoothLeController
 import com.kimo.reverprint.android.data.LoadedFontImpl
 import com.kimo.reverprint.data.pixels.BitmapFabric
-import com.kimo.reverprint.domain.images.TextOnBitmapGenerator
+import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGenerator
 import com.kimo.reverprint.domain.printer.DeviceManager
 import com.kimo.reverprint.extensions.bitmaps.BitmapConverter
 import com.kimo.reverprint.extensions.bitmaps.BitmapConverterImpl
-import com.kimo.reverprint.extensions.bitmaps.TextOnBitmapGeneratorImpl
+import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGeneratorImpl
 import com.kimo.reverprint.providers.tinyprint.PreviewGenerator
 import com.kimo.reverprint.providers.tinyprint.TinyprintBluetoothController
 import com.kimo.reverprint.providers.tinyprint.TinyprintManager

@@ -25,12 +25,12 @@ private class RamBitmap(
         return min(index, pixelsArray.size - 1)
     }
 
-    override fun getIntColorForPixel(index: Int): Int {
-        return pixelsArray[fit(index)]
+    override fun getIntColorForPixel(x: Int, y: Int): Int {
+        return pixelsArray[fit(indexOf(x, y))]
     }
 
-    override fun setIntColorForPixel(index: Int, value: Int) {
-        pixelsArray[fit(index)] = value
+    override fun setIntColorForPixel(x: Int, y: Int, value: Int) {
+        pixelsArray[fit(indexOf(x, y))] = value
     }
 
     override fun getCopy(): RamBitmap {

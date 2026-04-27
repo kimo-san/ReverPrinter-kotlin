@@ -11,8 +11,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+fun interface ByteSender {
+    suspend fun send(bytes: ByteArray)
+}
+
 class TinyprintPrinter(
-    val sendBytes: suspend (ByteArray) -> Unit,
+    val sender: ByteSender,
     val protocol: DeviceProtocol
 ) {
 
@@ -22,16 +26,15 @@ class TinyprintPrinter(
     ) = withContext(Dispatchers.Default) {
 
         require(imagePreview is PrintPreview)
-        val bitmap = imagePreview.printable[mode]
+        val bitmap = imagePreview.printable
 
-        require(bitmap != null)
         when (mode) {
             PrintMode.BPP4 -> print4bpp(bitmap)
             PrintMode.BPP1 -> print1bpp(bitmap)
         }
 
         if (imagePreview.appliedPrintConfig.addSpaceAfterPrint)
-            sendBytes(protocol.feedPaper(120))
+            sender.send(protocol.feedPaper(120))
     }
 
     private suspend fun print4bpp(
@@ -39,9 +42,9 @@ class TinyprintPrinter(
     ) = coroutineScope {
 
         require(bitmap.model == ColorModel.GREY_4BPP)
-        sendBytes(protocol.setMode(DeviceProtocol.Mode.GREY_IMG))
-        sendBytes(protocol.setQuality(DeviceProtocol.Quality.Five))
-        sendBytes(protocol.setEnergy(1))
+        sender.send(protocol.setMode(DeviceProtocol.Mode.GREY_IMG))
+        sender.send(protocol.setQuality(DeviceProtocol.Quality.Five))
+        sender.send(protocol.setEnergy(1))
 
         var loseCounter = 0
         repeat(bitmap.height) { y ->
@@ -50,7 +53,7 @@ class TinyprintPrinter(
                 durationInMillis = 50,
                 onLose = { println("...lost!"); loseCounter++ }
             ) {
-                sendBytes(
+                sender.send(
                     protocol.println4bpp(
                         bitmap.row(y),
                         protocol.device.usesCompressionForGreyScale
@@ -70,8 +73,8 @@ class TinyprintPrinter(
     ) = coroutineScope {
 
         require(bitmap.model == ColorModel.MONO)
-        sendBytes(protocol.setMode(DeviceProtocol.Mode.MONO_IMG))
-        sendBytes(protocol.setQuality(DeviceProtocol.Quality.Five))
+        sender.send(protocol.setMode(DeviceProtocol.Mode.MONO_IMG))
+        sender.send(protocol.setQuality(DeviceProtocol.Quality.Five))
 
         var loseCounter = 0
         repeat(bitmap.height) { y ->
@@ -80,7 +83,7 @@ class TinyprintPrinter(
                 durationInMillis = 50,
                 onLose = { println("...lost!"); loseCounter++ }
             ) {
-                sendBytes(protocol.println1bpp(bitmap.row(y)))
+                sender.send(protocol.println1bpp(bitmap.row(y)))
                 println("...done!")
             }
         }

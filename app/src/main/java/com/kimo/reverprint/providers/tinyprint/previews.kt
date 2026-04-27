@@ -8,19 +8,16 @@ import com.kimo.reverprint.domain.printer.PrintMode
 import com.kimo.reverprint.domain.printer.ThermalPrinter
 import com.kimo.reverprint.extensions.bitmaps.BitmapConverter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class PrintPreview(
-    viewable: Map<PrintMode, ImagePixels>,
-    val printable: Map<PrintMode, ImagePixels>,
+    viewable: ImagePixels,
+    val printable: ImagePixels,
     printConfig: DeviceManager.PrintConfig,
 ) : DeviceManager.PrintPreviews(viewable, printConfig)
 
 class PreviewGenerator(val converter: BitmapConverter) {
 
-    lateinit var deviceGetter: () -> ThermalPrinter
     suspend fun generate(
         imageBitmap: ImagePixels,
         printConfig: DeviceManager.PrintConfig,
@@ -29,26 +26,22 @@ class PreviewGenerator(val converter: BitmapConverter) {
         withContext(Dispatchers.Default) {
 
             this@PreviewGenerator.deviceGetter = deviceGetter
-            val previews = mutableMapOf<PrintMode, ImagePixels>()
-            val toPrint = mutableMapOf<PrintMode, ImagePixels>()
+            var previews: ImagePixels? = null
+            var toPrint: ImagePixels? = null
 
-            deviceGetter().capabilities.supportedModes.forEach {
-                launch {
-                    distributeAndGeneratePreview(
-                        it,
-                        imageBitmap,
-                        printConfig
-                    ) { printable, preview ->
-                        previews[it] = preview
-                        toPrint[it] = printable
-                    }
-                }
+            distributeAndGeneratePreview(
+                printConfig.mode,
+                imageBitmap,
+                printConfig
+            ) { printable, preview ->
+                previews = preview
+                toPrint = printable
             }
 
-            joinAll()
-            PrintPreview(previews, toPrint, printConfig)
+            PrintPreview(previews!!, toPrint!!, printConfig)
         }
 
+    lateinit var deviceGetter: () -> ThermalPrinter
     private suspend fun distributeAndGeneratePreview(
         mode: PrintMode,
         imageBitmap: ImagePixels,

@@ -12,7 +12,8 @@ import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.tools.fonts.Font
 import com.kimo.reverprint.tools.fonts.FontParameters
 import com.kimo.reverprint.tools.fonts.Glyph
-import com.kimo.reverprint.extensions.bitmaps.create
+import com.kimo.reverprint.extensions.bitmaps.implementedEquivalent
+import com.kimo.reverprint.extensions.bitmaps.insertFrom
 import com.kimo.reverprint.tools.graphics.BitmapCreator
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
@@ -59,7 +60,14 @@ class LoadedFontImpl(
             paint
         )
 
-        return Glyph(bitmapCreator.create(bitmap.toImagePixels()))
+        val bp = bitmap.toImagePixels()
+        return Glyph(
+            bitmapCreator.create(
+                bp.width,
+                bp.height,
+                bp.model.implementedEquivalent()
+            ).insertFrom(bp)
+        )
     }
 
     override fun getBitmapOfChar(

@@ -15,6 +15,11 @@ interface BitmapCreator {
         width: Int,
         colorModel: ColorModel
     ): Pixels
+
+    suspend fun createFastExtendable(
+        width: Int,
+        colorModel: ColorModel
+    ): Pixels
 }
 
 /**
@@ -39,30 +44,30 @@ interface Pixels {
  */
 interface CloseablePixels: Pixels, AutoCloseable
 
+/**
+ * Helper for implementation of own variants for bitmaps with different types of storages.
+ */
 abstract class AbstractPixels: Pixels {
 
     // - - - - - - - - - - - - - - - - - - - - - - -
-    // Basic essentials to override
+    // Essentials to override
 
     abstract override val width: Int
     abstract override val height: Int
     abstract override var colorModel: ColorModel
         protected set
-    protected abstract fun getIntColorForPixel(index: Int): Int
-    protected abstract fun setIntColorForPixel(index: Int, value: Int)
+    protected abstract fun getIntColorForPixel(x: Int, y: Int): Int
+    protected abstract fun setIntColorForPixel(x: Int, y: Int, value: Int)
 
     // - - - - - - - - - - - - - - - - - - - - - - -
     // Impl
 
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun getIndex(x: Int, y: Int) = y * width + x
-
     final override fun get(x: Int, y: Int): Color {
-        return Color(getIntColorForPixel(getIndex(x, y)))
+        return Color(getIntColorForPixel(x, y))
     }
 
     final override operator fun set(x: Int, y: Int, value: Color) {
-        setIntColorForPixel(getIndex(x, y), value.int)
+        setIntColorForPixel(x, y, value.int)
     }
 
     final override val pixelList: List<Int>
@@ -70,7 +75,7 @@ abstract class AbstractPixels: Pixels {
             override val size: Int
                 get() = width * height
             override fun get(index: Int): Int =
-                getIntColorForPixel(index)
+                getIntColorForPixel(index % width, index / width)
         }
 
     final override suspend fun changeColorModel(targetModel: ColorModel) {
@@ -82,6 +87,9 @@ abstract class AbstractPixels: Pixels {
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - -
+
+    @Suppress("NOTHING_TO_INLINE")
+    protected inline fun indexOf(x: Int, y: Int) = y * width + x
 
     private fun ensureIsCorrect() {
         val allowedRange = 0..<(colorModel.channelDepth.coerceAtLeast(2))

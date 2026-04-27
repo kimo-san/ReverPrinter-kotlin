@@ -13,8 +13,8 @@ import com.kimo.reverprint.tools.fonts.ColorSettings
 import com.kimo.reverprint.tools.fonts.Font
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Monochrome
-import com.kimo.reverprint.domain.images.BitmapTextConfig
-import com.kimo.reverprint.domain.images.TextOnBitmapGenerator
+import com.kimo.reverprint.extensions.bitmaps.text.BitmapTextConfig
+import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -99,7 +99,8 @@ class MainViewModel(
             deviceManager.generatePreviews(
                 img, DeviceManager.PrintConfig(
                     addSpaceAfterPrint = printPrefs.addSpaceAfterPrint,
-                    ditherImage = imagePrefs.dither
+                    ditherImage = imagePrefs.dither,
+                    mode = imagePrefs.mode
                 )
             )
         }
@@ -115,7 +116,8 @@ class MainViewModel(
                 image.toImagePixels(),
                 DeviceManager.PrintConfig(
                     addSpaceAfterPrint = printPrefs.addSpaceAfterPrint,
-                    ditherImage = imagePrefs.dither
+                    ditherImage = imagePrefs.dither,
+                    mode = imagePrefs.mode
                 )
             )
         }

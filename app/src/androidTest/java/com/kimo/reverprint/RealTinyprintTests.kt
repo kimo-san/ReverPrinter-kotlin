@@ -94,7 +94,8 @@ class RealTinyprintTests : TinyprintTestWrapper() {
             imageBitmap = createGradientBitmap(100, 20),
             printConfig = DeviceManager.PrintConfig(
                 addSpaceAfterPrint = false,
-                ditherImage = false
+                ditherImage = false,
+                mode = PrintMode.BPP1
             )
         )
         controller.print(previews, PrintMode.BPP4)
@@ -112,7 +113,8 @@ class RealTinyprintTests : TinyprintTestWrapper() {
             imageBitmap = createChessBitmap(100, 20, 2),
             printConfig = DeviceManager.PrintConfig(
                 addSpaceAfterPrint = true,
-                ditherImage = true
+                ditherImage = true,
+                mode = PrintMode.BPP1
             )
         )
         controller.print(previews, PrintMode.BPP1)

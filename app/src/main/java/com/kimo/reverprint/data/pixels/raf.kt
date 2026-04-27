@@ -1,18 +1,19 @@
 package com.kimo.reverprint.data.pixels
 
+import com.kimo.reverprint.data.pixels.file.FileHeader
+import com.kimo.reverprint.data.pixels.file.KeyInFile
+import com.kimo.reverprint.data.pixels.file.SavableColorModel
 import com.kimo.reverprint.tools.graphics.AbstractPixels
-import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.tools.graphics.CloseablePixels
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.ColorModel
-import com.kimo.reverprint.tools.graphics.Grey4
-import com.kimo.reverprint.tools.graphics.Grey8
 import com.kimo.reverprint.tools.graphics.Monochrome
 import com.kimo.reverprint.tools.graphics.Pixels
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.RandomAccessFile
+import java.nio.file.Files
 
 class RafBitmapCreator(
     val createFile: () -> File
@@ -26,7 +27,7 @@ class RafBitmapCreator(
         val file = createFile()
         file.createNewFile()
         RafBitmap.writePixelsIntoStorage(
-            file, ReadOnlyPixels(
+            file, StubPixels(
                 width = width,
                 height = height,
                 colorModel = colorModel,
@@ -36,27 +37,20 @@ class RafBitmapCreator(
         RafBitmap(file, createFile)
     }
 
-    private class ReadOnlyPixels(
+    private class StubPixels(
         override val width: Int,
         override val height: Int,
         colorModel: ColorModel,
         private val defaultValue: Color
     ): AbstractPixels() {
 
+        override fun getIntColorForPixel(x: Int, y: Int): Int =
+            defaultValue.int
+
+        override fun setIntColorForPixel(x: Int, y: Int, value: Int) = error("Should not be used")
+        override fun getCopy(): Pixels = error("Should not be used")
         override var colorModel: ColorModel = colorModel
-            set(_) { error("Should not be used") }
-
-        override fun getIntColorForPixel(index: Int): Int {
-            return defaultValue.int
-        }
-
-        override fun setIntColorForPixel(index: Int, value: Int) {
-            error("Should not be used")
-        }
-
-        override fun getCopy(): Pixels {
-            error("Should not be used")
-        }
+            set(_) = error("Should not be used")
     }
 }
 
@@ -83,9 +77,9 @@ private class RafBitmap(
         }
 
     override fun getCopy(): Pixels {
-        val copyFile = createFile()
-        writePixelsIntoStorage(copyFile, this)
-        return RafBitmap(copyFile, createFile)
+        val newFile = createFile()
+        Files.copy(file.toPath(), newFile.toPath())
+        return RafBitmap(file, createFile)
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - -
@@ -97,13 +91,15 @@ private class RafBitmap(
         file.deleteRecursively()
     }
 
-    override fun setIntColorForPixel(index: Int, value: Int) {
-        raf.seek(header.pixelOffset + index.toLong() * Int.SIZE_BYTES)
+    override fun setIntColorForPixel(x: Int, y: Int, value: Int) {
+        raf.seek(header.pixelOffset + indexOf(x, y).toLong() * Int.SIZE_BYTES)
         raf.writeInt(value)
     }
 
-    override fun getIntColorForPixel(index: Int): Int {
-        raf.seek(header.pixelOffset + index.toLong() * Int.SIZE_BYTES)
+    override fun getIntColorForPixel(x: Int, y: Int): Int {
+        require(x in 0 until width) { "The width is $width" }
+        require(y in 0 until height) { "The height is $height" }
+        raf.seek(header.pixelOffset + indexOf(x, y).toLong() * Int.SIZE_BYTES)
         return raf.readInt()
     }
 
@@ -143,14 +139,17 @@ private class RafBitmap(
         ) {
             file.deleteRecursively()
             file.createNewFile()
+            val header = FileHeader.from(
+                pixels.width,
+                SavableColorModel.from(pixels.colorModel)
+            ).pack()
+            file.writer().use {
+                it.write(header, 0, header.length)
+            }
             RandomAccessFile(file, "rw").use { raf ->
                 raf.setLength(0L)
                 raf.seek(0L)
 
-                val header = FileHeader.from(
-                    pixels.width,
-                    SavableColorModel.from(pixels.colorModel)
-                )
 
                 raf.writeBytes(header)
                 raf.writeBytes("\n")
@@ -160,111 +159,5 @@ private class RafBitmap(
                 }
             }
         }
-    }
-}
-
-@ConsistentCopyVisibility
-private data class FileHeader private constructor(
-    val width: Int,
-    val model: SavableColorModel,
-    val pixelOffset: Long
-) {
-
-    fun pack() = from(width, model)
-    fun copy(key: KeyInFile, newValue: Int): FileHeader {
-        return when (key) {
-            KeyInFile.WIDTH ->
-                copy(width = newValue)
-            KeyInFile.COLOR_MODEL ->
-                copy(model = SavableColorModel.Companion.from(newValue))
-        }
-    }
-
-    companion object {
-
-        fun from(
-            width: Int,
-            model: SavableColorModel
-        ): String = listOf(
-            KeyInFile.WIDTH to width,
-            KeyInFile.COLOR_MODEL to model.code
-        ).joinToString { (key, value) ->
-            val key = key.stringName
-            val packedValue = IntPacker.pack(value)
-            "$key=$packedValue"
-        }
-
-        fun parse(line: String, pixelOffset: Long): FileHeader {
-            val unpacked = unpackKeys(line)
-            return FileHeader(
-                width = unpacked[KeyInFile.WIDTH]!!,
-                model = SavableColorModel.Companion.from(unpacked[KeyInFile.COLOR_MODEL]!!),
-                pixelOffset = pixelOffset
-            )
-        }
-
-        private fun unpackKeys(string: String): Map<KeyInFile, Int> {
-
-            val allKeysAndValues = Regex("(\\w+)=(.{2})").findAll(string)
-
-            val map = mutableMapOf<KeyInFile, Int>()
-
-            allKeysAndValues.forEachIndexed { i, stringValue ->
-
-                map[KeyInFile.from(stringValue.groupValues[1])] =
-                    IntPacker.unpack(stringValue.groupValues[2])
-            }
-
-            return map
-        }
-    }
-}
-
-private enum class KeyInFile(val stringName: String) {
-
-    WIDTH("w"),
-    COLOR_MODEL("c");
-
-    companion object {
-        private val byString: Map<String, KeyInFile> =
-            entries.associateBy { it.stringName }
-        fun from(string: String): KeyInFile =
-            byString[string] ?: error("Unsupported code of KeyInFile: $string")
-    }
-}
-
-private enum class SavableColorModel(
-    val implementedEquivalent: ColorModel,
-    val code: Int
-) {
-    ARGB8(Argb8, 1),
-    GREY8(Grey8, 2),
-    GREY4(Grey4, 3),
-    MONO(Monochrome, 4);
-
-    companion object {
-        private val byModel: Map<ColorModel, SavableColorModel> =
-            entries.associateBy { it.implementedEquivalent }
-        private val byString: Map<Int, SavableColorModel> =
-            entries.associateBy { it.code }
-
-        fun from(model: ColorModel): SavableColorModel =
-            byModel[model] ?: error("Unsupported ColorModel: $model")
-        fun from(code: Int): SavableColorModel =
-            byString[code] ?: error("Unsupported code of color model: $code")
-    }
-}
-
-// Packs and unpacks any int value into 2 chars
-private object IntPacker {
-
-    fun unpack(string: String): Int {
-        return (string[0].code shl 16) or string[1].code
-    }
-
-    fun pack(int: Int): String {
-        val high = (int ushr 16).toChar()
-        val low = (int and 0xFFFF).toChar()
-        return "$high$low"
     }
 }

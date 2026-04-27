@@ -1,4 +1,4 @@
-package com.kimo.reverprint.domain.images
+package com.kimo.reverprint.extensions.bitmaps.text
 
 import com.kimo.reverprint.tools.fonts.ColorSettings
 import com.kimo.reverprint.tools.fonts.Font

@@ -43,16 +43,23 @@ class BitmapConverterImpl(
     }
 
     private suspend fun generateModifiedPixels(source: ImagePixels, settings: BitmapSettings): Pixels {
+
+        val bp = creator.createFastExtendable(
+            source.width,
+            source.model.implementedEquivalent()
+        ).insertFrom(source)
+
         return BitmapProcessorImpl(
-            creator.create(source),
-            settings,
-            creator
+            bp, settings, creator
         ).process()
     }
 
     private suspend fun generateViewablePixels(source: ImagePixels): Pixels {
         return BitmapProcessorImpl(
-            creator.create(source),
+            creator.createFastExtendable(
+                source.width,
+                source.model.implementedEquivalent()
+            ).insertFrom(source),
             BitmapSettings(colorModel = ColorModel.ARGB_8),
             creator
         ).process()
