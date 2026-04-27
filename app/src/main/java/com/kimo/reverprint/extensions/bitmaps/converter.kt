@@ -11,7 +11,7 @@ import com.kimo.reverprint.tools.graphics.resizedCopy
 interface BitmapConverter {
 
     /**
-     * `Viewable` means image of 8-bit ARGB color format
+     * `Viewable` means an image of 8-bit ARGB color format
      * @param returnValues modified bitmap and then viewable preview
      */
     suspend fun convertViewableImage(
