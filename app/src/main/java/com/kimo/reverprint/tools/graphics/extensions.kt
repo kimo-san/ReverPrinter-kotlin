@@ -54,9 +54,12 @@ suspend fun Pixels.resizedCopy(
     }
 
     val scaledBitmap = creator.create(
-        width = newWidth,
-        height = newHeight,
-        colorModel = colorModel
+        BitmapConfig(
+            newWidth,
+            newHeight,
+            colorModel,
+            config.storage
+        )
     )
     val (scaleX, scaleY) = (originalWidth.toFloat() / newWidth) to (originalHeight.toFloat() / newHeight)
     scaledBitmap.forEach { p, x, y ->
@@ -69,11 +72,12 @@ suspend fun Pixels.resizedCopy(
     scaledBitmap
 }
 
-suspend fun changeColorModel(
+suspend fun Pixels.changeColorModel(
     newModel: ColorModel,
-    pixels: Pixels,
     dither: Boolean
 ) = withContext(Dispatchers.Default) {
+
+    val pixels = this@changeColorModel
 
     when (newModel) {
         pixels.colorModel -> Unit
@@ -113,6 +117,22 @@ suspend fun Pixels.insertPixels(
     }
 }
 
+suspend fun Pixels.fillRectangle(
+    color: Color,
+    colorModel: ColorModel,
+    startX: Int,
+    endX: Int,
+    startY: Int,
+    endY: Int
+) {
+    val color = this.colorModel.fromModel(color, colorModel)
+    for (y in startY..endY) {
+        yield()
+        for (x in startX..endX)
+            this[x, y] = color
+    }
+}
+
 /**
  * Floyd Steinberg Algorithm
  */
@@ -121,7 +141,8 @@ private suspend fun fitToModelUsingDithering(
     newModel: ColorModel
 ): Unit = withContext(Dispatchers.Default) {
     require(newModel.channelCount == 1) {
-        "Dithering is currently applicable only for 1-channel colors. Current model is ${pixels.colorModel.name}"
+        "Dithering is currently applicable only for 1-channel colors. " +
+        "Current model is ${pixels.colorModel.name}"
     }
 
     val maxLevel = max(newModel.channelDepth - 1, 1)

@@ -1,11 +1,13 @@
 package com.kimo.reverprint.extensions.bitmaps.text
 
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
 import com.kimo.reverprint.tools.fonts.FontParameters
+import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.BitmapCreator
-import com.kimo.reverprint.tools.graphics.Pixels
-import com.kimo.reverprint.tools.graphics.fullFill
+import com.kimo.reverprint.tools.graphics.StorageType
+import com.kimo.reverprint.tools.graphics.fillRectangle
 import com.kimo.reverprint.tools.graphics.insertPixels
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,29 +22,31 @@ class TextOnBitmapGeneratorImpl(
         config: BitmapTextConfig
     ): ImagePixels = withContext(Dispatchers.Default) {
 
-        val imageRows = mutableListOf<Pixels>()
+        val result = creator.create(
+            BitmapConfig(
+                width = config.width,
+                colorModel = config.colors.model,
+                storage = StorageType.MAPPED_RAF
+            )
+        )
 
         var xPointer = 0
-        val yPointer = 0
-        var currentRow = 0
+        var yPointer = 0
 
-        fun nextRow() {
-            currentRow++
+        suspend fun nextRow() {
+            // fill rest of the current row
+            result.fillRectangle(
+                config.colors.background,
+                config.colors.model,
+                startX = xPointer,
+                endX = result.width - 1,
+                startY = yPointer,
+                endY = result.height
+            )
+            // move pointers
             xPointer = 0
+            yPointer += config.letterHeight + config.lineSpacing
         }
-        suspend fun presentRow() =
-            imageRows.getOrElse(currentRow) {
-                do {
-                    imageRows += creator.create(
-                        width = config.width,
-                        height = config.letterHeight,
-                        colorModel = config.colors.model,
-                    ).apply {
-                        fullFill(config.colors.background)
-                    }
-                } while (imageRows.lastIndex < currentRow)
-                imageRows[currentRow]
-            }
 
         text.forEach { char ->
             yield()
@@ -53,43 +57,26 @@ class TextOnBitmapGeneratorImpl(
                     val toInsert = config.font.getBitmapOfChar(
                         char, FontParameters(
                             config.letterHeight,
-                            config.colors))
+                            config.colors)
+                    )
 
-                    if (xPointer + toInsert.bitmap.width > presentRow().width) {
+                    val spaceWithChar = xPointer + toInsert.bitmap.width
+                    if (spaceWithChar > config.width) {
                         nextRow()
                     }
 
-                    presentRow().insertPixels(
+                    result.insertPixels(
                         newPixels = toInsert.bitmap,
                         startX = xPointer,
                         startY = yPointer
                     )
 
-                    xPointer += toInsert.bitmap.width + config.letterSpacing
+                    xPointer += toInsert.bitmap.width
                 }
             }
         }
 
-        val result = creator.createExtendable(
-            width = config.width,
-            colorModel = config.colors.model
-        )
-
-        val spacing = creator.create(
-            config.width, config.lineSpacing, config.colors.model
-        ).apply { fullFill(config.colors.background) }
-        repeat(imageRows.size) { rowCount ->
-            result.insertPixels(
-                newPixels = imageRows[rowCount],
-                startX = 0,
-                startY = rowCount * (config.letterHeight + config.lineSpacing)
-            )
-            result.insertPixels(
-                spacing,
-                0,
-                rowCount * (config.letterHeight + config.lineSpacing) + config.letterHeight
-            )
-        }
+        nextRow()
 
         return@withContext result.asDomainImmutable()
     }

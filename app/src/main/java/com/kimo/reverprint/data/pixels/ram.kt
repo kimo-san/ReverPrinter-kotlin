@@ -3,6 +3,7 @@ package com.kimo.reverprint.data.pixels
 import com.kimo.reverprint.tools.graphics.AbstractPixels
 import com.kimo.reverprint.tools.graphics.ColorModel
 import com.kimo.reverprint.tools.graphics.Pixels
+import com.kimo.reverprint.tools.graphics.StorageType
 import kotlin.math.min
 
 class RamBitmapCreator: MonomodeFabric {
@@ -20,17 +21,19 @@ private class RamBitmap(
     private val pixelsArray: IntArray
 ) : AbstractPixels() {
 
+    override val storageType: StorageType = StorageType.RAM
+
     @Suppress("NOTHING_TO_INLINE")
     private inline fun fit(index: Int): Int {
         return min(index, pixelsArray.size - 1)
     }
 
     override fun getIntColorForPixel(x: Int, y: Int): Int {
-        return pixelsArray[fit(indexOf(x, y))]
+        return pixelsArray[fit(indexOf(x, y).toInt())]
     }
 
     override fun setIntColorForPixel(x: Int, y: Int, value: Int) {
-        pixelsArray[fit(indexOf(x, y))] = value
+        pixelsArray[fit(indexOf(x, y).toInt())] = value
     }
 
     override fun getCopy(): RamBitmap {

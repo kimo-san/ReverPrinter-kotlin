@@ -3,7 +3,7 @@ package com.kimo.reverprint.tools.graphics
 import kotlin.math.roundToInt
 
 /*
- * Numbers in names of following objects indicate the color depth
+ * Numbers in names of following objects indicate the color depth á channel
  */
 
 object Argb8 : ColorModel {
@@ -26,7 +26,7 @@ object Argb8 : ColorModel {
 
             val luminance = model.lumOf(sourceColor)
             val valueProChannel = (luminance * (channelDepth - 1)).roundToInt() and 0xff
-            val a = 0xFF
+            val a = 0xff
             val r = valueProChannel
             val g = valueProChannel
             val b = valueProChannel
@@ -38,11 +38,11 @@ object Argb8 : ColorModel {
     }
 
     override fun lumOf(color: Color): Float {
-        val r = getChannelValue(color, R).toDouble() / 0xff
-        val g = getChannelValue(color, G).toDouble() / 0xff
-        val b = getChannelValue(color, B).toDouble() / 0xff
-        val lum = (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
-        return (lum).toFloat()
+        val r = getChannelValue(color, R) / 0xff
+        val g = getChannelValue(color, G) / 0xff
+        val b = getChannelValue(color, B) / 0xff
+        val lum = (0.2126f * r) + (0.7152f * g) + (0.0722f * b)
+        return lum
     }
 
     override fun getChannelValue(src: Color, channel: Int): Int =
@@ -108,7 +108,7 @@ object Monochrome : ColorModel {
     ): Color = Color(intColor and 0x1)
 
     override fun fromModel(sourceColor: Color, model: ColorModel): Color =
-        Color(model.lumOf(sourceColor).roundToInt())
+        Color(model.lumOf(sourceColor).roundToInt() and 0x1)
 
     override fun lumOf(color: Color): Float =
         (color.int).toFloat()

@@ -1,4 +1,4 @@
-package com.kimo.reverprint.data.pixels.file
+package com.kimo.reverprint.data.pixels
 
 import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.tools.graphics.ColorModel
@@ -6,47 +6,44 @@ import com.kimo.reverprint.tools.graphics.Grey4
 import com.kimo.reverprint.tools.graphics.Grey8
 import com.kimo.reverprint.tools.graphics.Monochrome
 
+private const val ASCII_CHAR_LENGTH = 1
 @ConsistentCopyVisibility
 data class FileHeader private constructor(
     val width: Int,
-    val model: SavableColorModel,
+    private val model: SavableColorModel,
     val pixelOffset: Long,
     private val packed: String
 ) {
+    val colorModel get() = model.implementedEquivalent
 
-    fun pack() = packed
+    fun pack() = packed.toByteArray(Charsets.US_ASCII)
 
-    fun copy(key: KeyInFile, newValue: Int): FileHeader {
-        return when (key) {
-            KeyInFile.WIDTH ->
-                copy(width = newValue)
-            KeyInFile.COLOR_MODEL ->
-                copy(model = SavableColorModel.from(newValue))
-        }
-    }
+    fun withRewrittenColorModel(newModel: ColorModel) =
+        copy(model = SavableColorModel.from(newModel))
 
     companion object {
 
         fun from(
             width: Int,
-            model: SavableColorModel
+            model: ColorModel
         ): FileHeader {
+
+            val savableModel = SavableColorModel.from(model)
             val packed = listOf(
                 KeyInFile.WIDTH to width,
-                KeyInFile.COLOR_MODEL to model.code
+                KeyInFile.COLOR_MODEL to savableModel.code
             ).joinToString(
                 separator = ",",
                 postfix = "\n"
             ) { (key, value) ->
-                val key = key.stringName
-                val packedValue = IntEncoder.encode(value)
-                "$key=$packedValue"
+                "${key.stringName}=$value"
             }
+
             return FileHeader(
                 width = width,
-                model = model,
-                pixelOffset = packed.length.toLong() * Char.SIZE_BYTES,
-                packed
+                model = savableModel,
+                packed = packed,
+                pixelOffset = packed.length.toLong() * ASCII_CHAR_LENGTH
             )
         }
 
@@ -56,19 +53,19 @@ data class FileHeader private constructor(
                 width = unpacked[KeyInFile.WIDTH]!!,
                 model = SavableColorModel.from(unpacked[KeyInFile.COLOR_MODEL]!!),
                 pixelOffset = pixelOffset,
-                line
+                packed = line,
             )
         }
 
         private fun unpackKeys(string: String): Map<KeyInFile, Int> {
 
-            val allKeysAndValues = Regex("(\\w+)=(.{2})").findAll(string)
+            val allKeysAndValues = Regex("(\\w+)=(\\d+)").findAll(string)
             val map = mutableMapOf<KeyInFile, Int>()
 
-            allKeysAndValues.forEach { encodedInt ->
-                val key = encodedInt.groupValues[1]
-                val encodedValue = encodedInt.groupValues[2]
-                map[KeyInFile.from(key)] = IntEncoder.decode(encodedValue)
+            allKeysAndValues.forEach { encodedValues ->
+                val key = encodedValues.groupValues[1]
+                val encodedValue = encodedValues.groupValues[2]
+                map[KeyInFile.from(key)] = encodedValue.toInt()
             }
 
             return map
@@ -76,7 +73,7 @@ data class FileHeader private constructor(
     }
 }
 
-enum class KeyInFile(val stringName: String) {
+private enum class KeyInFile(val stringName: String) {
 
     WIDTH("w"),
     COLOR_MODEL("c");
@@ -89,7 +86,7 @@ enum class KeyInFile(val stringName: String) {
     }
 }
 
-enum class SavableColorModel(
+private enum class SavableColorModel(
     val implementedEquivalent: ColorModel,
     val code: Int
 ) {
@@ -108,19 +105,5 @@ enum class SavableColorModel(
             byModel[model] ?: error("Unsupported ColorModel: $model")
         fun from(code: Int): SavableColorModel =
             byString[code] ?: error("Unsupported code of color model: $code")
-    }
-}
-
-// Packs and unpacks any int value into 2 characters
-private object IntEncoder {
-
-    fun decode(string: String): Int {
-        return (string[0].code shl 16) or string[1].code
-    }
-
-    fun encode(int: Int): String {
-        val high = (int ushr 16).toChar()
-        val low = (int and 0xFFFF).toChar()
-        return "$high$low"
     }
 }

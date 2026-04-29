@@ -13,8 +13,10 @@ import com.kimo.reverprint.tools.fonts.Font
 import com.kimo.reverprint.tools.fonts.FontParameters
 import com.kimo.reverprint.tools.fonts.Glyph
 import com.kimo.reverprint.tools.graphics.Argb8
+import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Monochrome
+import com.kimo.reverprint.tools.graphics.StorageType
 import com.kimo.reverprint.tools.graphics.insertPixels
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -39,7 +41,14 @@ class RafImageTest {
         println(file.readText())
 
         println("Attempting to write into file...")
-        val loadable = creator.createExtendable(sourcePixels.width, sourcePixels.colorModel)
+        val loadable = creator.create(
+            BitmapConfig(
+                sourcePixels.width,
+                null,
+                sourcePixels.colorModel,
+                StorageType.MAPPED_RAF
+            )
+        )
         loadable.insertPixels(sourcePixels, 0, 0)
 
         println("Attempting to read the file again... " + file.length())
@@ -79,7 +88,13 @@ class RafImageTest {
 
             val f2 = File(context.filesDir, "saved_bitmap_2_2.bin")
             val creator2 = BitmapFabric { f2 }
-            val px2 = creator2.createExtendable(px.width, px.model.implementedEquivalent())
+            val px2 = creator2.create(
+                BitmapConfig(
+                    px.width, null,
+                    px.model.implementedEquivalent(),
+                    StorageType.MAPPED_RAF
+                )
+            )
             px2.insertPixels(px1, 0, 0)
             println("\n\n\n ##### NEXT ##### \n\n\n")
             present(px2.pixelList, px2.width)

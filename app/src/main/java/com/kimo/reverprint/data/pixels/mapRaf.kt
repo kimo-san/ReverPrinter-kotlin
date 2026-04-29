@@ -1,12 +1,10 @@
 package com.kimo.reverprint.data.pixels
 
-import com.kimo.reverprint.data.pixels.file.FileHeader
-import com.kimo.reverprint.data.pixels.file.KeyInFile
-import com.kimo.reverprint.data.pixels.file.SavableColorModel
 import com.kimo.reverprint.tools.graphics.AbstractPixels
 import com.kimo.reverprint.tools.graphics.CloseablePixels
 import com.kimo.reverprint.tools.graphics.ColorModel
 import com.kimo.reverprint.tools.graphics.Pixels
+import com.kimo.reverprint.tools.graphics.StorageType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -15,9 +13,12 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import kotlin.math.max
+import kotlin.math.min
 
 private const val GROWTH_BLOCK_BYTES = 1024 * 1024
 private const val BYTES_PER_PIXEL = Int.SIZE_BYTES
+private const val MAX_CHUNK_SIZE = Int.MAX_VALUE.toLong()
+
 class MappedRafBitmapCreator(
     val createFile: () -> File
 ): MonomodeFabric {
@@ -29,10 +30,7 @@ class MappedRafBitmapCreator(
         val file = createFile()
         MappedRafBitmap.writePixelsIntoStorage(
             file,
-            FileHeader.from(
-                width,
-                SavableColorModel.from(colorModel)
-            )
+            FileHeader.from(width, colorModel)
         )
         MappedRafBitmap(file, createFile)
     }
@@ -44,6 +42,8 @@ private class MappedRafBitmap(
     private val createFile: () -> File
 ) : AbstractPixels(), CloseablePixels {
 
+    override val storageType: StorageType = StorageType.MAPPED_RAF
+
     // - - - - - - - - - - - - - - - - - - - - - - -
     // Raf + Channel logic
 
@@ -51,8 +51,6 @@ private class MappedRafBitmap(
     private val channel: FileChannel = raf.channel
     private var header: FileHeader = readHeader()
     private var mapped: MappedByteBuffer = mapData(header.pixelOffset)
-    private var dataCapacityBytes: Long =
-        (file.length() - header.pixelOffset).coerceAtLeast(0L)
 
     private fun mapData(dataCapacityBytes: Long): MappedByteBuffer {
         val safeCapacity = dataCapacityBytes.coerceAtLeast(GROWTH_BLOCK_BYTES.toLong())
@@ -71,48 +69,57 @@ private class MappedRafBitmap(
 
     // capacity logic
 
-    private fun ensureCapacityFor(requiredPixelCount: Long) {
-        val requiredBytes = requiredPixelCount * BYTES_PER_PIXEL
-        if (requiredBytes <= dataCapacityBytes) return
 
-        val newCapacity = growCapacity(requiredBytes)
-        remap(newCapacity)
+    var usedPixelsCount = (file.length() - header.pixelOffset) / BYTES_PER_PIXEL
+    var currentChunkStart = 0L
+    var currentChunkEnd = 0L
+
+    private fun setInMap(index: Long, int: Int) {
+        checkChunkForIndex(index)
+        val index = index - currentChunkStart
+        mapped.putInt(index.toInt(), int)
     }
 
-    private fun growCapacity(requiredBytes: Long): Long {
-        val current = dataCapacityBytes.coerceAtLeast(GROWTH_BLOCK_BYTES.toLong())
-        var next = current
-
-        while (next < requiredBytes) {
-            next = max(next * 2, next + GROWTH_BLOCK_BYTES)
-        }
-        return next
+    private fun getFromMap(index: Long): Int {
+        checkChunkForIndex(index)
+        val index = index - currentChunkStart
+        return mapped.getInt(index.toInt())
     }
 
-    private fun remap(newCapacityBytes: Long) {
-        mapped.force()
-        val newSize = header.pixelOffset + newCapacityBytes
-        raf.setLength(newSize)
+    private fun checkChunkForIndex(pixelIndex: Long) {
+        usedPixelsCount = max(pixelIndex / BYTES_PER_PIXEL, usedPixelsCount)
+
+        val newChunkStart =
+            if (pixelIndex < currentChunkStart)
+                max(0, currentChunkStart - MAX_CHUNK_SIZE)
+            else if (pixelIndex > currentChunkEnd)
+                max(0, currentChunkStart + MAX_CHUNK_SIZE)
+            else return
+
+        val pixelByteSize = file.length() - header.pixelOffset
+        val newChunkEnd = min(pixelByteSize, newChunkStart + BYTES_PER_PIXEL)
+
         mapped = channel.map(
             FileChannel.MapMode.READ_WRITE,
             header.pixelOffset,
-            newCapacityBytes
+            newChunkEnd - newChunkStart
         )
-        dataCapacityBytes = newCapacityBytes
     }
 
-    private fun indexWithOffset(x: Int, y: Int) =
-        indexOf(x, y) * BYTES_PER_PIXEL + header.pixelOffset
 
     override fun close() {
         mapped.force()
+        mapped.clear()
         channel.close()
         raf.close()
-        file.deleteRecursively()
+        file.delete()
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - -
     // Simpler file logic
+
+    private fun indexInFile(x: Int, y: Int) =
+        indexOf(x, y) * BYTES_PER_PIXEL
 
     private fun readHeader(): FileHeader {
         raf.seek(0)
@@ -123,14 +130,11 @@ private class MappedRafBitmap(
 
     private fun writeHeader(newHeader: FileHeader) {
         raf.seek(0)
-        raf.writeChars(newHeader.pack())
-        raf.writeChars("\n")
+        raf.write(newHeader.pack())
     }
 
-    private fun getBitmapHeight(): Long {
-        val rowSize = raf.length() - header.pixelOffset
-        val bytesPerPixel = BYTES_PER_PIXEL
-        return rowSize / bytesPerPixel / width
+    private fun getBitmapHeight(): Int {
+        return (usedPixelsCount / header.width).toInt().coerceAtLeast(1)
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - -
@@ -140,41 +144,31 @@ private class MappedRafBitmap(
         get() = header.width
 
     override val height: Int
-        get() = getBitmapHeight().toInt()
+        get() = getBitmapHeight()
 
     override var colorModel: ColorModel
-        get() = header.model.implementedEquivalent
+        get() = header.colorModel
         set(value) {
-            val newSavableModel = SavableColorModel.from(value)
-            if (newSavableModel == header.model) return
-            writeHeader(
-                header.copy(KeyInFile.COLOR_MODEL, newSavableModel.code)
-            )
+            writeHeader(header.withRewrittenColorModel(value))
         }
 
     override fun getIntColorForPixel(x: Int, y: Int): Int {
         require(x in 0 ..< width) { "x out of bounds: $x, max: ${width - 1}" }
         require(y in 0 ..< height) { "y out of bounds: $y, height=${height - 1}" }
-
-        val offset = indexWithOffset(x, y)
-        return mapped.getInt(offset.toInt())
+        return getFromMap(indexInFile(x, y))
     }
 
     override fun setIntColorForPixel(x: Int, y: Int, value: Int) {
         require(x in 0 ..< width) { "x out of bounds: $x, max: ${width - 1}" }
         require(y >= 0) { "y < 0: $y" }
 
-        val requiredPixels = indexOf(x, y) + 1L
-        ensureCapacityFor(requiredPixels)
-
-        val offset = indexWithOffset(x, y)
-        mapped.putInt(offset.toInt(), value)
+        setInMap(indexInFile(x, y), value)
     }
 
     override fun getCopy(): Pixels {
         val newFile = createFile()
         Files.copy(file.toPath(), newFile.toPath())
-        return MappedRafBitmap(file, createFile)
+        return MappedRafBitmap(newFile, createFile)
     }
 
     companion object {
@@ -182,12 +176,10 @@ private class MappedRafBitmap(
             file: File,
             header: FileHeader
         ) {
-            file.deleteRecursively()
+            file.delete()
             file.createNewFile()
             val packed = header.pack()
-            file.writer().use {
-                it.write(packed, 0, packed.length)
-            }
+            file.writeBytes(packed)
         }
     }
 }

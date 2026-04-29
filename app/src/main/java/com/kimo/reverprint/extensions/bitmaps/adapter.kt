@@ -2,18 +2,21 @@ package com.kimo.reverprint.extensions.bitmaps
 
 import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.tools.graphics.Argb8
+import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Grey4
 import com.kimo.reverprint.tools.graphics.Grey8
 import com.kimo.reverprint.tools.graphics.Monochrome
 import com.kimo.reverprint.tools.graphics.Pixels
 import com.kimo.reverprint.tools.graphics.BitmapCreator
+import com.kimo.reverprint.tools.graphics.StorageType
 import com.kimo.reverprint.tools.graphics.forEach
+import kotlinx.coroutines.yield
 
 private typealias DomainColorModel = com.kimo.reverprint.domain.images.ColorModel
 private typealias ImplementedColorModel = com.kimo.reverprint.tools.graphics.ColorModel
 
-fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
+suspend fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
     println("Doing...!")
 
     println("Width: " + pixels.width)
@@ -24,9 +27,9 @@ fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
 
     println("This pixels have: $width, $height")
 
-    for (y in 0..<pixels.height) {
-        println("Line y index = " + y + ". Max y index: " + (pixels.height))
-        for (x in 0..<pixels.width) {
+    repeat(pixels.height) { y ->
+        yield()
+        repeat(pixels.width) { x ->
             val pxl = pixels.pixelList[y * pixels.width + x]
             this[x, y] = Color(pxl)
         }
@@ -38,9 +41,12 @@ fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
 
 suspend fun BitmapCreator.from(pixels: ImagePixels): Pixels {
     val copy = create(
-        pixels.width,
-        pixels.height,
-        pixels.model.implementedEquivalent()
+        BitmapConfig(
+            pixels.width,
+            pixels.height,
+            pixels.model.implementedEquivalent(),
+            StorageType.RAM
+        )
     )
     copy.forEach { p, x, y ->
         p[x, y] = Color(

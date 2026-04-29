@@ -14,10 +14,11 @@ import com.kimo.reverprint.tools.fonts.FontParameters
 import com.kimo.reverprint.tools.fonts.Glyph
 import com.kimo.reverprint.extensions.bitmaps.implementedEquivalent
 import com.kimo.reverprint.extensions.bitmaps.insertFrom
+import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.BitmapCreator
+import com.kimo.reverprint.tools.graphics.StorageType
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
-import java.util.HashMap
 import java.util.concurrent.ConcurrentHashMap
 
 // todo: remove runBlocking calls
@@ -63,9 +64,12 @@ class LoadedFontImpl(
         val bp = bitmap.toImagePixels()
         return Glyph(
             bitmapCreator.create(
-                bp.width,
-                bp.height,
-                bp.model.implementedEquivalent()
+                BitmapConfig(
+                    bp.width,
+                    bp.height,
+                    bp.model.implementedEquivalent(),
+                    StorageType.RAM
+                )
             ).insertFrom(bp)
         )
     }
@@ -90,16 +94,18 @@ private class ParametrizedGlyphBuffer (
     private val getNewItem: suspend (Char, FontParameters) -> Glyph
 ) {
 
-    private var buffer = ConcurrentHashMap<FontParameters, HashMap<Char, Glyph>>()
+    private var fontParams: FontParameters? = null
+    private var buffer = ConcurrentHashMap<Char, Glyph>()
 
     suspend fun getGlyph(
         char: Char,
         parameters: FontParameters
     ): Glyph {
         yield()
-        return buffer.computeIfAbsent(parameters) {
-            hashMapOf()
-        }.computeIfAbsent(char) {
+        if (fontParams != parameters) {
+            buffer.clear()
+        }
+        return buffer.computeIfAbsent(char) {
             runBlocking {
                 getNewItem(char, parameters)
             }

@@ -3,25 +3,6 @@ package com.kimo.reverprint.tools.graphics
 import kotlin.math.max
 import kotlin.math.min
 
-interface BitmapCreator {
-
-    suspend fun create(
-        width: Int,
-        height: Int,
-        colorModel: ColorModel
-    ): Pixels
-
-    suspend fun createExtendable(
-        width: Int,
-        colorModel: ColorModel
-    ): Pixels
-
-    suspend fun createFastExtendable(
-        width: Int,
-        colorModel: ColorModel
-    ): Pixels
-}
-
 /**
  * Basic representation of any operable bitmap
  */
@@ -31,12 +12,30 @@ interface Pixels {
     val height: Int
     val colorModel: ColorModel
     val pixelList: List<Int>
+    val config: BitmapConfig
 
     fun getCopy(): Pixels
     operator fun get(x: Int, y: Int): Color
     operator fun set(x: Int, y: Int, value: Color)
     suspend fun changeColorModel(targetModel: ColorModel)
 
+}
+
+interface BitmapCreator {
+    suspend fun create(config: BitmapConfig): Pixels
+}
+
+data class BitmapConfig(
+    val width: Int,
+    val height: Int? = null,
+    val colorModel: ColorModel,
+    val storage: StorageType
+)
+
+enum class StorageType {
+    RAM,
+    RAF,
+    MAPPED_RAF,
 }
 
 /**
@@ -56,11 +55,20 @@ abstract class AbstractPixels: Pixels {
     abstract override val height: Int
     abstract override var colorModel: ColorModel
         protected set
+    protected abstract val storageType: StorageType
     protected abstract fun getIntColorForPixel(x: Int, y: Int): Int
     protected abstract fun setIntColorForPixel(x: Int, y: Int, value: Int)
 
     // - - - - - - - - - - - - - - - - - - - - - - -
     // Impl
+
+    override val config: BitmapConfig
+        get() = BitmapConfig(
+            width = width,
+            height = height,
+            colorModel = colorModel,
+            storage = storageType
+        )
 
     final override fun get(x: Int, y: Int): Color {
         return Color(getIntColorForPixel(x, y))
@@ -89,7 +97,7 @@ abstract class AbstractPixels: Pixels {
     // - - - - - - - - - - - - - - - - - - - - - - -
 
     @Suppress("NOTHING_TO_INLINE")
-    protected inline fun indexOf(x: Int, y: Int) = y * width + x
+    protected inline fun indexOf(x: Int, y: Int) = y.toLong() * width + x
 
     private fun ensureIsCorrect() {
         val allowedRange = 0..<(colorModel.channelDepth.coerceAtLeast(2))

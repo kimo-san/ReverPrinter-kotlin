@@ -2,8 +2,10 @@
 # README
 
 Maybe, you are a developer.
-Maybe, you want to understand code under of this project.
-If this is your case, this file may help you.
+Maybe, you want to understand the code under of this project.
+Maybe, this file will help you.
+
+However, just remember that this project is in an active development.
 
 ## Dependency Graph
 

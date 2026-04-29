@@ -3,8 +3,10 @@ package com.kimo.reverprint.extensions.bitmaps
 import com.kimo.reverprint.domain.images.BitmapSettings
 import com.kimo.reverprint.domain.images.ColorModel
 import com.kimo.reverprint.domain.images.ImagePixels
+import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.BitmapCreator
 import com.kimo.reverprint.tools.graphics.Pixels
+import com.kimo.reverprint.tools.graphics.StorageType
 import com.kimo.reverprint.tools.graphics.changeColorModel
 import com.kimo.reverprint.tools.graphics.resizedCopy
 
@@ -27,7 +29,7 @@ interface BitmapConverter {
 
 class BitmapConverterImpl(
     val creator: BitmapCreator
-): BitmapConverter {
+) : BitmapConverter {
 
     override suspend fun convertViewableImage(
         source: ImagePixels,
@@ -42,29 +44,38 @@ class BitmapConverterImpl(
         returnValues(modified, viewable)
     }
 
-    private suspend fun generateModifiedPixels(source: ImagePixels, settings: BitmapSettings): Pixels {
+    private suspend fun generateModifiedPixels(
+        source: ImagePixels,
+        settings: BitmapSettings
+    ): Pixels {
+
 
         val bp = creator.create(
-            source.width,
-            source.height,
-            source.model.implementedEquivalent()
+            BitmapConfig(
+                source.width,
+                source.height,
+                source.model.implementedEquivalent(),
+                StorageType.RAM
+            )
         ).insertFrom(source)
 
-        return BitmapProcessorImpl(
-            bp, settings, creator
-        ).process()
+        return BitmapProcessorImpl(bp, settings, creator).process()
     }
 
     private suspend fun generateViewablePixels(source: ImagePixels): Pixels {
-        return BitmapProcessorImpl(
-            creator.create(
+
+        val settings = BitmapSettings(colorModel = ColorModel.ARGB_8)
+
+        val bp = creator.create(
+            BitmapConfig(
                 source.width,
                 source.height,
-                source.model.implementedEquivalent()
-            ).insertFrom(source),
-            BitmapSettings(colorModel = ColorModel.ARGB_8),
-            creator
-        ).process()
+                source.model.implementedEquivalent(),
+                StorageType.RAM
+            )
+        ).insertFrom(source)
+
+        return BitmapProcessorImpl(bp, settings, creator).process()
     }
 }
 
@@ -78,9 +89,8 @@ private class BitmapProcessorImpl(
     suspend fun process(): Pixels {
         pixels = pixels.resizedCopy(settings.width, settings.height, creator)
         if (settings.colorModel != null) {
-            changeColorModel(
+            pixels.changeColorModel(
                 settings.colorModel.implementedEquivalent(),
-                pixels = pixels,
                 dither = settings.dither
             )
         }
