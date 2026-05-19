@@ -1,14 +1,38 @@
 package com.kimo.reverprint
 
+import android.net.http.HeaderBlock
+import com.kimo.reverprint.data.file.ConcreteFileCreator
+import com.kimo.reverprint.data.pixels.BitmapFabric
+import com.kimo.reverprint.data.pixels.InFileBitmapCreator
 import com.kimo.reverprint.data.pixels.RamBitmapCreator
 import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
+import com.kimo.reverprint.extensions.bitmaps.from
+import com.kimo.reverprint.tools.fonts.Font
+import com.kimo.reverprint.tools.fonts.FontParameters
+import com.kimo.reverprint.tools.fonts.Glyph
+import com.kimo.reverprint.tools.graphics.BitmapConfig
+import com.kimo.reverprint.tools.graphics.BitmapCreator
 import com.kimo.reverprint.tools.graphics.ColorModel
+import com.kimo.reverprint.tools.graphics.Monochrome
+import com.kimo.reverprint.tools.graphics.StorageType
 import com.kimo.reverprint.tools.graphics.forEach
 import kotlinx.coroutines.runBlocking
+import java.io.File
 
 object ForBitmapTests {
+
+    fun ramOnlyCreator(): BitmapCreator {
+        return BitmapFabric(RamBitmapCreator())
+    }
+
+    fun completeBitmapCreator(block: () -> File): BitmapCreator {
+        return BitmapFabric(
+            RamBitmapCreator(),
+            InFileBitmapCreator(ConcreteFileCreator(block))
+        )
+    }
 
     fun createGradientBitmap(height: Int, width: Int): ImagePixels = runBlocking {
 
@@ -61,6 +85,35 @@ object ForBitmapTests {
     }
 
     val ColorModel.name get() = this::class.simpleName
+}
+
+
+object ForFontTests {
+    class TestFont: Font {
+
+        override fun getBitmapOfChar(
+            char: Char,
+            parameters: FontParameters
+        ): Glyph {
+            if (char == ' ') return spaceGlyph
+            return defaultGlyph
+        }
+
+
+        private val fabric = BitmapFabric(RamBitmapCreator())
+
+        private val defaultGlyph = runBlocking {
+            ForBitmapTests.createChessBitmap(4, 4, 2)
+                .let { fabric.from(it) }
+                .let(::Glyph)
+        }
+
+        private val spaceGlyph = runBlocking {
+            BitmapConfig(4, 4, Monochrome, StorageType.RAM)
+                .let { fabric.create(it) }
+                .let(::Glyph)
+        }
+    }
 }
 
 /*

@@ -2,19 +2,10 @@ package com.kimo.reverprint.data.pixels
 
 import com.kimo.reverprint.tools.graphics.AbstractPixels
 import com.kimo.reverprint.tools.graphics.ColorModel
-import com.kimo.reverprint.tools.graphics.Pixels
 import com.kimo.reverprint.tools.graphics.StorageType
 import kotlin.math.min
 
-class RamBitmapCreator: MonomodeFabric {
-    fun create(
-        width: Int,
-        height: Int,
-        colorModel: ColorModel
-    ): Pixels =  RamBitmap(width, height, colorModel, IntArray(width * height))
-}
-
-private class RamBitmap(
+class RamBitmap(
     override val width: Int,
     override val height: Int,
     override var colorModel: ColorModel,

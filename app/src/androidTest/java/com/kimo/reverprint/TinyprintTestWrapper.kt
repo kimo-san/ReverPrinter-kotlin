@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.kimo.reverprint.android.data.AndroidBluetoothLeController
-import com.kimo.reverprint.data.pixels.BitmapFabric
 import com.kimo.reverprint.extensions.bitmaps.BitmapConverterImpl
 import com.kimo.reverprint.providers.tinyprint.PreviewGenerator
 import com.kimo.reverprint.providers.tinyprint.TinyprintBluetoothController
@@ -34,7 +33,7 @@ abstract class TinyprintTestWrapper {
         val controller: TinyprintManager = TinyprintManager(
             TinyprintBluetoothController(bluetoothController),
             previewGenerator = PreviewGenerator(
-                converter = BitmapConverterImpl(BitmapFabric({ error("Slop") }))
+                converter = BitmapConverterImpl(ForBitmapTests.ramOnlyCreator())
             )
         )
 

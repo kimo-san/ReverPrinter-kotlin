@@ -107,6 +107,9 @@ suspend fun Pixels.changeColorModel(
     }
 }
 
+/**
+ * Небезопасно вызывать, если пиксели для вставки не вмещаются в границы полотна.
+ */
 suspend fun Pixels.insertPixels(
     newPixels: Pixels,
     startX: Int,

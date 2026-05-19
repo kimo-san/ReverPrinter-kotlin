@@ -1,6 +1,5 @@
 package com.kimo.reverprint.extensions.bitmaps.text
 
-import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
 import com.kimo.reverprint.tools.fonts.FontParameters

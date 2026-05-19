@@ -23,6 +23,7 @@ interface Pixels {
 
 interface BitmapCreator {
     suspend fun create(config: BitmapConfig): Pixels
+    fun canApply(config: BitmapConfig): Boolean
 }
 
 data class BitmapConfig(
@@ -34,14 +35,8 @@ data class BitmapConfig(
 
 enum class StorageType {
     RAM,
-    RAF,
     MAPPED_RAF,
 }
-
-/**
- * For larger images
- */
-interface CloseablePixels: Pixels, AutoCloseable
 
 /**
  * Helper for implementation of own variants for bitmaps with different types of storages.
