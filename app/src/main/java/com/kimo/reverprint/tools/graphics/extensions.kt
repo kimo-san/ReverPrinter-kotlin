@@ -1,6 +1,6 @@
 package com.kimo.reverprint.tools.graphics
 
-import com.kimo.reverprint.name
+import com.kimo.reverprint.ForBitmapTests.name
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield

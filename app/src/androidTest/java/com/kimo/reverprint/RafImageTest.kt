@@ -3,15 +3,14 @@ package com.kimo.reverprint
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kimo.reverprint.ForBitmapTests.createChessBitmap
+import com.kimo.reverprint.ForBitmapTests.present
 import com.kimo.reverprint.data.pixels.BitmapFabric
 import com.kimo.reverprint.extensions.bitmaps.text.BitmapTextConfig
 import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGeneratorImpl
 import com.kimo.reverprint.extensions.bitmaps.from
 import com.kimo.reverprint.extensions.bitmaps.implementedEquivalent
 import com.kimo.reverprint.tools.fonts.ColorSettings
-import com.kimo.reverprint.tools.fonts.Font
-import com.kimo.reverprint.tools.fonts.FontParameters
-import com.kimo.reverprint.tools.fonts.Glyph
 import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.Color
@@ -80,7 +79,7 @@ class RafImageTest {
                         foreground = Color(0x1),
                         background = Color(0x0)
                     ),
-                    font = BaseFont()
+                    font = TestFont()
                 )
             )
             val px1 = creator.from(px)
@@ -104,19 +103,4 @@ class RafImageTest {
         }
     }
 
-}
-
-class BaseFont: Font {
-    override fun getBitmapOfChar(
-        char: Char,
-        parameters: FontParameters
-    ): Glyph {
-        return gph
-    }
-
-    val gph = runBlocking {
-        Glyph(
-            BitmapFabric { error("slop") }.from(createChessBitmap(4, 4, 2))
-        )
-    }
 }

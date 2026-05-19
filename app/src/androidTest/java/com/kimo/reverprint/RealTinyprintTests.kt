@@ -1,5 +1,7 @@
 package com.kimo.reverprint
 
+import com.kimo.reverprint.ForBitmapTests.createChessBitmap
+import com.kimo.reverprint.ForBitmapTests.createGradientBitmap
 import com.kimo.reverprint.providers.tinyprint.DeviceProtocol
 import com.kimo.reverprint.domain.printer.DeviceManager
 import com.kimo.reverprint.domain.printer.PrintMode
@@ -28,6 +30,7 @@ class RealTinyprintTests : TinyprintTestWrapper() {
         controller.protocol.setEnergy(7).also {
             println(it.toHexString())
         }
+        TODO()
     }
 
     @Test
