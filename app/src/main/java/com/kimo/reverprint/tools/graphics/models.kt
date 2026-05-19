@@ -25,11 +25,11 @@ object Argb8 : ColorModel {
         return if (model == Argb8) sourceColor else if (model.channelCount == 1) {
 
             val luminance = model.lumOf(sourceColor)
-            val valueProChannel = (luminance * (channelDepth - 1)).roundToInt() and 0xff
+            val valuePerChannel = (luminance * (channelDepth - 1)).roundToInt() and 0xff
             val a = 0xff
-            val r = valueProChannel
-            val g = valueProChannel
-            val b = valueProChannel
+            val r = valuePerChannel
+            val g = valuePerChannel
+            val b = valuePerChannel
             val result = (a shl 24) or (r shl 16) or (g shl 8) or b
             Color(result)
         } else {
