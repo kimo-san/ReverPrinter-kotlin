@@ -35,7 +35,7 @@ data class BitmapConfig(
 
 enum class StorageType {
     RAM,
-    MAPPED_RAF,
+    MAPPED_FILE,
 }
 
 /**
