@@ -25,7 +25,7 @@ class TextOnBitmapGeneratorImpl(
             BitmapConfig(
                 width = config.width,
                 colorModel = config.colors.model,
-                storage = StorageType.MAPPED_RAF
+                storage = StorageType.MAPPED_FILE
             )
         )
 

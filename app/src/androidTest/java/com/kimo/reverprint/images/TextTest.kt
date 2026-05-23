@@ -2,11 +2,11 @@ package com.kimo.reverprint.images
 
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.kimo.reverprint.ForBitmapTests
 import com.kimo.reverprint.ForFontTests
 import com.kimo.reverprint.extensions.bitmaps.text.BitmapTextConfig
 import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGeneratorImpl
+import com.kimo.reverprint.getContext
 import com.kimo.reverprint.tools.fonts.ColorSettings
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Monochrome
@@ -18,10 +18,10 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class TextTest {
 
-    private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
+    private val context: Context = getContext()
     private val textSettings = BitmapTextConfig(
-        width = 100,
-        letterHeight = 50,
+        width = 50,
+        letterHeight = 10,
         letterSpacing = 0,
         lineSpacing = 0,
         colors = ColorSettings(
@@ -39,18 +39,18 @@ class TextTest {
     fun textG(): Unit = runBlocking {
 
         val f1 = File(context.filesDir, getFileName(1, 1)).also { it.createNewFile() }
-        val creator = ForBitmapTests.ramOnlyCreator()
+        val creator = ForBitmapTests.bitmapCreator { f1 }
         val textGen = TextOnBitmapGeneratorImpl(creator)
 
         println("Created file: " + f1.length() + " " + f1.exists())
 
         val px1 = textGen.generatePixels("A", textSettings)
-        println("Pixels: ${px1.model}, ${px1.width}, ${px1.height}")
+        println("Pixels: ${px1.model}, ${px1.width}, ${px1.height}. Array Size: ${px1.pixelList.size}")
         ForBitmapTests.present(px1.pixelList, px1.width)
     }
 
-    @Test
-    fun textGen() {
+//    @Test
+//    fun textGen() {
 //        val testNumber = 2
 //        runBlocking {
 //            val px1 = creator.from(px)
@@ -70,5 +70,5 @@ class TextTest {
 //            println("\n\n\n ##### NEXT ##### \n\n\n")
 //            ForBitmapTests.present(px2.pixelList, px2.width)
 //        }
-    }
+//    }
 }

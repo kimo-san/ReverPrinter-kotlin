@@ -31,6 +31,6 @@ class InFileBitmapCreator(
     }
 
     override fun canApply(config: BitmapConfig): Boolean {
-        return config.storage == StorageType.MAPPED_RAF
+        return config.storage == StorageType.MAPPED_FILE
     }
 }

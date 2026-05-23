@@ -10,9 +10,7 @@ class ConcreteFileCreator(
 ): FileCreator {
     override fun create(type: FileTypes): IFile {
         return when (type) {
-            FileTypes.MAPPED -> MappedFile(
-                file = createFile(),
-                initialLogicalSize = 0,
+            FileTypes.MAPPED -> MappedFile.create(
                 createNewFile = createFile
             )
         }

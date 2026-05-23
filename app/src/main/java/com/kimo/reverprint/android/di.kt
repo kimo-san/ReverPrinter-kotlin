@@ -41,7 +41,10 @@ val koinModule = module {
     }
 
     single<BitmapCreator> {
-        BitmapFabric(InFileBitmapCreator(get()), RamBitmapCreator())
+        BitmapFabric(
+            InFileBitmapCreator(get()),
+            RamBitmapCreator()
+        )
     }
 
     single<BitmapConverter> {

@@ -11,7 +11,7 @@ class InFileBitmap(
     private val mappedFile: IFile
 ) : AbstractPixels() {
 
-    override val storageType: StorageType = StorageType.MAPPED_RAF
+    override val storageType: StorageType = StorageType.MAPPED_FILE
 
     // - - - - - - - - - - - - - - - - - - - - - - -
     // Stored data

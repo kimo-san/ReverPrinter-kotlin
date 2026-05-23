@@ -4,7 +4,7 @@ package com.kimo.reverprint.tools.graphics
 @JvmInline
 value class Color(val int: Int)
 
-interface ColorModel {
+sealed interface ColorModel {
 
     val channelCount: Int
     val channelDepth: Int

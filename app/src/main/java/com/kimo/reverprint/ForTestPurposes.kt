@@ -1,6 +1,5 @@
 package com.kimo.reverprint
 
-import android.net.http.HeaderBlock
 import com.kimo.reverprint.data.file.ConcreteFileCreator
 import com.kimo.reverprint.data.pixels.BitmapFabric
 import com.kimo.reverprint.data.pixels.InFileBitmapCreator
@@ -27,7 +26,7 @@ object ForBitmapTests {
         return BitmapFabric(RamBitmapCreator())
     }
 
-    fun completeBitmapCreator(block: () -> File): BitmapCreator {
+    fun bitmapCreator(block: () -> File): BitmapCreator {
         return BitmapFabric(
             RamBitmapCreator(),
             InFileBitmapCreator(ConcreteFileCreator(block))

@@ -30,7 +30,7 @@ data class BitmapConfig(
     val width: Int,
     val height: Int? = null,
     val colorModel: ColorModel,
-    val storage: StorageType
+    val storage: StorageType = StorageType.RAM
 )
 
 enum class StorageType {

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kimo.reverprint.ForBitmapTests
-import com.kimo.reverprint.ForBitmapTests.completeBitmapCreator
+import com.kimo.reverprint.ForBitmapTests.bitmapCreator
 import com.kimo.reverprint.extensions.bitmaps.from
 import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.StorageType
@@ -27,7 +27,7 @@ class RafImageTest {
 
         println("Created file: " + file.createNewFile())
 
-        val creator = completeBitmapCreator(crFile)
+        val creator = bitmapCreator(crFile)
         val sourcePixels = creator.from(ForBitmapTests.createChessBitmap(100, 100, 2))
         println(file.readText())
 
@@ -37,7 +37,7 @@ class RafImageTest {
                 sourcePixels.width,
                 null,
                 sourcePixels.colorModel,
-                StorageType.MAPPED_RAF
+                StorageType.MAPPED_FILE
             )
         )
         loadable.insertPixels(sourcePixels, 0, 0)
