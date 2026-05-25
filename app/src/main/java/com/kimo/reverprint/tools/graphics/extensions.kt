@@ -1,6 +1,5 @@
 package com.kimo.reverprint.tools.graphics
 
-import com.kimo.reverprint.ForBitmapTests.name
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
@@ -145,7 +144,7 @@ private suspend fun fitToModelUsingDithering(
 ): Unit = withContext(Dispatchers.Default) {
     require(newModel.channelCount == 1) {
         "Dithering is currently applicable only for 1-channel colors. " +
-        "Current model is ${pixels.colorModel.name}"
+        "Current model is ${pixels.colorModel}"
     }
 
     val maxLevel = max(newModel.channelDepth - 1, 1)
