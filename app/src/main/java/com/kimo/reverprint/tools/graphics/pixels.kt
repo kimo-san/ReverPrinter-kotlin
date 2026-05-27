@@ -30,7 +30,7 @@ data class BitmapConfig(
     val width: Int,
     val height: Int? = null,
     val colorModel: ColorModel,
-    val storage: StorageType = StorageType.RAM
+    val storage: StorageType
 )
 
 enum class StorageType {
@@ -42,6 +42,7 @@ enum class StorageType {
 /**
  * Helper for implementation of own variants for bitmaps with different types of storages.
  */
+@Suppress("NOTHING_TO_INLINE")
 abstract class AbstractPixels: Pixels {
 
     // - - - - - - - - - - - - - - - - - - - - - - -
@@ -54,6 +55,8 @@ abstract class AbstractPixels: Pixels {
     protected abstract val storageType: StorageType
     protected abstract fun getIntColorForPixel(x: Int, y: Int): Int
     protected abstract fun setIntColorForPixel(x: Int, y: Int, value: Int)
+    protected open fun handleReadCoordinateOutOfRange(x: Int, y: Int) { error("Coordinate ($x|$y) on the bitmap ${width}x$height is not present.") }
+    protected open fun handleWriteCoordinateOutOfRange(x: Int, y: Int) { /* ignore by default */ }
 
     // - - - - - - - - - - - - - - - - - - - - - - -
     // Impl
@@ -67,10 +70,12 @@ abstract class AbstractPixels: Pixels {
         )
 
     final override fun get(x: Int, y: Int): Color {
+        if (!isCoordinatePresent(x, y)) handleReadCoordinateOutOfRange(x, y)
         return Color(getIntColorForPixel(x, y))
     }
 
     final override operator fun set(x: Int, y: Int, value: Color) {
+        if (!isCoordinatePresent(x, y)) handleWriteCoordinateOutOfRange(x, y)
         setIntColorForPixel(x, y, value.int)
     }
 
@@ -92,8 +97,11 @@ abstract class AbstractPixels: Pixels {
 
     // - - - - - - - - - - - - - - - - - - - - - - -
 
-    @Suppress("NOTHING_TO_INLINE")
-    protected inline fun indexOf(x: Int, y: Int) = y.toLong() * width + x
+    protected inline fun indexOf(x: Int, y: Int): Long =
+        y.toLong() * width + x
+
+    private inline fun isCoordinatePresent(x: Int, y: Int): Boolean =
+        x in 0..<width && y in 0..<height
 
     private fun ensureIsCorrect() {
         val allowedRange = 0..<(colorModel.channelDepth.coerceAtLeast(2))

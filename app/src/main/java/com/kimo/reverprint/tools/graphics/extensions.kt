@@ -145,6 +145,8 @@ private suspend fun fitToModelUsingDithering(
         "Current model is ${pixels.colorModel}"
     }
 
+    val width = pixels.width
+    val height = pixels.height
     val maxLevel = max(newModel.channelDepth - 1, 1)
 
     val step = max(pixels.colorModel.channelDepth - 1, 1) / maxLevel
@@ -154,11 +156,25 @@ private suspend fun fitToModelUsingDithering(
         val newPixelValue = (oldPixelValue * 1f / step).roundToInt() * step
         val error = oldPixelValue - newPixelValue
 
+        val leftNeighbourX = x - 1
+        val rightNeighbourX = x + 1
+        val downerNeighbourY = y + 1
+
         p[x, y] = p.colorModel.colorOf(newPixelValue)
-        p[x + 1, y] = p.colorModel.colorOf((p[x + 1, y].int + (error * 7f / 16)).toInt())
-        p[x, y + 1] = p.colorModel.colorOf((p[x, y + 1].int + (error * 5f / 16)).toInt())
-        p[x - 1, y + 1] = p.colorModel.colorOf((p[x - 1, y + 1].int + (error * 3f / 16)).toInt())
-        p[x + 1, y + 1] = p.colorModel.colorOf((p[x + 1, y + 1].int + (error * 1f / 16)).toInt())
+
+        if (rightNeighbourX < width)
+            p[rightNeighbourX, y] = p.colorModel.colorOf((p[rightNeighbourX, y].int + (error * 7f / 16)).toInt())
+
+        if (downerNeighbourY < height) {
+
+            p[x, downerNeighbourY] = p.colorModel.colorOf((p[x, downerNeighbourY].int + (error * 5f / 16)).toInt())
+
+            if (leftNeighbourX >= 0)
+                p[leftNeighbourX, downerNeighbourY] = p.colorModel.colorOf((p[leftNeighbourX, downerNeighbourY].int + (error * 3f / 16)).toInt())
+
+            if (rightNeighbourX < width)
+                p[rightNeighbourX, downerNeighbourY] = p.colorModel.colorOf((p[rightNeighbourX, downerNeighbourY].int + (error * 1f / 16)).toInt())
+        }
     }
 
     pixels.changeColorModel(newModel)

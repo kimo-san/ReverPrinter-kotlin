@@ -71,7 +71,7 @@ class BitmapConverterImpl(
                 source.width,
                 source.height,
                 source.model.implementedEquivalent(),
-                StorageType.RAM
+                StorageType.NATIVE
             )
         ).insertFrom(source)
 

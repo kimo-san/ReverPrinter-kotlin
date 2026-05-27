@@ -2,7 +2,7 @@ package com.kimo.reverprint.extensions.bitmaps.text
 
 import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
-import com.kimo.reverprint.tools.fonts.FontParameters
+import com.kimo.reverprint.tools.font.FontParameters
 import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.BitmapCreator
 import com.kimo.reverprint.tools.graphics.StorageType
@@ -25,7 +25,7 @@ class TextOnBitmapGeneratorImpl(
             BitmapConfig(
                 width = config.width,
                 colorModel = config.colors.model,
-                storage = StorageType.MAPPED_FILE
+                storage = StorageType.NATIVE
             )
         )
 
@@ -40,7 +40,7 @@ class TextOnBitmapGeneratorImpl(
                 startX = xPointer,
                 endX = result.width - 1,
                 startY = yPointer,
-                endY = result.height
+                endY = result.height - 1
             )
             // move pointers
             xPointer = 0

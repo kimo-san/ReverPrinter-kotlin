@@ -17,15 +17,6 @@ private typealias DomainColorModel = com.kimo.reverprint.domain.images.ColorMode
 private typealias ImplementedColorModel = com.kimo.reverprint.tools.graphics.ColorModel
 
 suspend fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
-    println("Doing...!")
-
-    println("Width: " + pixels.width)
-    println("Height: " + pixels.height)
-    println("Model: " + pixels.model)
-    println("Size: " + pixels.pixelList.size)
-    println("Max y: " + (pixels.pixelList.size / pixels.width))
-
-    println("This pixels have: $width, $height")
 
     repeat(pixels.height) { y ->
         yield()
@@ -35,7 +26,6 @@ suspend fun Pixels.insertFrom(pixels: ImagePixels): Pixels {
         }
     }
 
-    println("Done!")
     return this
 }
 
@@ -80,7 +70,7 @@ fun Pixels.asDomainImmutable() =
 fun DomainColorModel.implementedEquivalent(): ImplementedColorModel {
     return when (this) {
         DomainColorModel.ARGB_8 -> Argb8
-        DomainColorModel.GREY_4BPP -> Grey4
+        DomainColorModel.GREY_4 -> Grey4
         DomainColorModel.MONO -> Monochrome
     }
 }
@@ -88,7 +78,7 @@ fun DomainColorModel.implementedEquivalent(): ImplementedColorModel {
 fun ImplementedColorModel.domainEquivalent(): DomainColorModel {
     return when (this) {
         is Argb8 -> DomainColorModel.ARGB_8
-        is Grey4 -> DomainColorModel.GREY_4BPP
+        is Grey4 -> DomainColorModel.GREY_4
         is Monochrome -> DomainColorModel.MONO
         is Grey8 -> error("Grey8bpp is not used in domain")
     }

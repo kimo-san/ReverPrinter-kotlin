@@ -1,6 +1,7 @@
-package com.kimo.reverprint.android
+package com.kimo.reverprint.android.di
 
 import android.app.Application
+import com.kimo.reverprint.android.data.AndroidBitmapCreator
 import com.kimo.reverprint.android.presentation.MainViewModel
 import com.kimo.reverprint.android.data.AndroidBluetoothLeController
 import com.kimo.reverprint.android.data.LoadedFontImpl
@@ -41,10 +42,12 @@ val koinModule = module {
     }
 
     single<BitmapCreator> {
-        BitmapFabric(
-            InFileBitmapCreator(get()),
-            RamBitmapCreator()
-        )
+//        BitmapFabric(
+//            InFileBitmapCreator(get()),
+//            RamBitmapCreator(),
+//            AndroidBitmapCreator()
+//        )
+        AndroidBitmapCreator()
     }
 
     single<BitmapConverter> {

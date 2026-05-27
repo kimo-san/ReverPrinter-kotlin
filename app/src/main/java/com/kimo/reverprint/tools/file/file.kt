@@ -10,3 +10,13 @@ interface IFile {
     fun writeBytes(offset: Long, data: ByteArray)
     fun copy(): IFile
 }
+
+fun interface FileCreator {
+    fun create(
+        type: FileTypes
+    ): IFile
+}
+
+enum class FileTypes {
+    MAPPED
+}

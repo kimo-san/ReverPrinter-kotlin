@@ -50,11 +50,11 @@ class RealTinyprintTests : TinyprintTestWrapper() {
     fun testIO() = runBlocking {
 
         val command = controller.protocol.requestState()
-        val expectedMessageType = DeviceProtocol.DeviceAnswer.State::class
+        val expectedMessageType = DeviceProtocol.Answer.State::class
 
         controller.deviceController.stream {
             send(command)
-            val answer: DeviceProtocol.DeviceAnswer = read()
+            val answer: DeviceProtocol.Answer = read()
                 .map { controller.protocol.parseReceivedMessage(it) }
                 .filterNotNull()
                 .onEach { println("Parsed upper level: $it") }
@@ -78,11 +78,11 @@ class RealTinyprintTests : TinyprintTestWrapper() {
         ).map { it.toByte() }.toByteArray() to 1f
 
         data1.let(controller.protocol::parseReceivedMessage)
-            .let { it as DeviceProtocol.DeviceAnswer.State }
+            .let { it as DeviceProtocol.Answer.State }
             .also { assert(it.batteryLevel() == exp1) }
 
         data2.let(controller.protocol::parseReceivedMessage)
-            .let { it as DeviceProtocol.DeviceAnswer.State }
+            .let { it as DeviceProtocol.Answer.State }
             .also { assert(it.batteryLevel() == exp2) }
     }
 

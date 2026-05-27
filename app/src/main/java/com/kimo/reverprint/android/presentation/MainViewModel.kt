@@ -9,8 +9,8 @@ import com.kimo.reverprint.android.toImagePixels
 import com.kimo.reverprint.domain.printer.DeviceManager
 import com.kimo.reverprint.domain.printer.PrintMode
 import com.kimo.reverprint.domain.printer.ThermalPrinter
-import com.kimo.reverprint.tools.fonts.ColorSettings
-import com.kimo.reverprint.tools.fonts.Font
+import com.kimo.reverprint.tools.font.ColorSettings
+import com.kimo.reverprint.tools.font.Font
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Monochrome
 import com.kimo.reverprint.extensions.bitmaps.text.BitmapTextConfig

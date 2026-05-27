@@ -131,8 +131,8 @@ private class BluetoothDeviceChecker(
     private var job: Job = scope.launch {
         bluetoothController.read()
             .map { protocol.parseReceivedMessage(it) }
-            .filterIsInstance<DeviceProtocol.DeviceAnswer.IsFull>()
-            .map { it.isFull }
+            .filterIsInstance<DeviceProtocol.Answer.IsOverloaded>()
+            .map { it.isOverloaded }
             .collect { isFull.value = it }
     }
 

@@ -9,9 +9,9 @@ import androidx.core.graphics.createBitmap
 import com.kimo.reverprint.R
 import com.kimo.reverprint.android.toImagePixels
 import com.kimo.reverprint.tools.graphics.Argb8
-import com.kimo.reverprint.tools.fonts.Font
-import com.kimo.reverprint.tools.fonts.FontParameters
-import com.kimo.reverprint.tools.fonts.Glyph
+import com.kimo.reverprint.tools.font.Font
+import com.kimo.reverprint.tools.font.FontParameters
+import com.kimo.reverprint.tools.font.Glyph
 import com.kimo.reverprint.extensions.bitmaps.implementedEquivalent
 import com.kimo.reverprint.extensions.bitmaps.insertFrom
 import com.kimo.reverprint.tools.graphics.BitmapConfig
@@ -68,7 +68,7 @@ class LoadedFontImpl(
                     bp.width,
                     bp.height,
                     bp.model.implementedEquivalent(),
-                    StorageType.RAM
+                    StorageType.NATIVE
                 )
             ).insertFrom(bp)
         )
