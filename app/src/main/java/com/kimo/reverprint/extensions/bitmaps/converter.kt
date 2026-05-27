@@ -94,6 +94,6 @@ private class BitmapProcessorImpl(
                 dither = settings.dither
             )
         }
-        return pixels.getCopy()
+        return pixels
     }
 }
