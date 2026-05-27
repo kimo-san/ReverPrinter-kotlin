@@ -101,8 +101,6 @@ suspend fun Pixels.changeColorModel(
                 pixels.changeColorModel(Monochrome)
             }
         }
-
-        else -> error("Unsupported color model ${newModel::class.simpleName}")
     }
 }
 

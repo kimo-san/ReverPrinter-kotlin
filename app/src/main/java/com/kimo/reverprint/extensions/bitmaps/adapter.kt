@@ -91,6 +91,5 @@ fun ImplementedColorModel.domainEquivalent(): DomainColorModel {
         is Grey4 -> DomainColorModel.GREY_4BPP
         is Monochrome -> DomainColorModel.MONO
         is Grey8 -> error("Grey8bpp is not used in domain")
-        else -> error("Color model (${this::class.simpleName}) is not used in domain")
     }
 }
