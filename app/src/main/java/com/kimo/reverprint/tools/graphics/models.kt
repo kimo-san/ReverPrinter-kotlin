@@ -38,9 +38,9 @@ object Argb8 : ColorModel {
     }
 
     override fun lumOf(color: Color): Float {
-        val r = getChannelValue(color, R) / 0xff
-        val g = getChannelValue(color, G) / 0xff
-        val b = getChannelValue(color, B) / 0xff
+        val r = getChannelValue(color, R).toFloat() / 0xff
+        val g = getChannelValue(color, G).toFloat() / 0xff
+        val b = getChannelValue(color, B).toFloat() / 0xff
         val lum = (0.2126f * r) + (0.7152f * g) + (0.0722f * b)
         return lum
     }
