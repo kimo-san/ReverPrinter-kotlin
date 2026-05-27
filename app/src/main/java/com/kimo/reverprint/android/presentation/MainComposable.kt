@@ -1,13 +1,20 @@
 package com.kimo.reverprint.android.presentation
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,7 +75,11 @@ import org.koin.androidx.compose.koinViewModel
 enum class InputMode { IMAGE, TEXT }
 
 private val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-    listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+    listOf(
+        Manifest.permission.BLUETOOTH_SCAN,
+        Manifest.permission.BLUETOOTH_CONNECT,
+        Manifest.permission.BLUETOOTH_ADMIN
+    )
 } else {
     listOf(Manifest.permission.BLUETOOTH)
 }
@@ -79,7 +90,7 @@ fun MainComposable(importedData: ImportedData?) {
 
     val viewModel: MainViewModel = koinViewModel()
 
-    DeviceHandler(viewModel)
+    BluetoothDeviceHandler(viewModel)
 
     val device by viewModel.device.collectAsState()
     Scaffold(
@@ -151,7 +162,7 @@ fun MainComposable(importedData: ImportedData?) {
                     ?.asImageBitmap(),
                 loadingPreview = viewModel.loadingPreview.collectAsState().value,
                 device = device!!,
-                onPickImage = pickImageByUser { img(it) },
+                onPickImage = imagePickerByUser { img(it) },
                 onSetText = { txt(it) },
                 onPrint = { viewModel.print(showingMode) },
                 applyPreferences = { imgPrefs, printPrefs ->
@@ -362,17 +373,25 @@ fun ContentInput(
     }
 }
 
+
 @Composable
 @OptIn(ExperimentalPermissionsApi::class)
-private fun DeviceHandler(viewModel: MainViewModel) {
+private fun  BluetoothDeviceHandler(viewModel: MainViewModel) {
 
     val permissionLauncher = rememberMultiplePermissionsState(bluetoothPermissions)
     val device by viewModel.device.collectAsState()
+    val context = LocalContext.current
+
+    @SuppressLint("MissingPermission")
+    val enabler = bluetoothEnablerByUser(context)
 
     if (device == null) {
 
         LaunchedEffect(Unit) {
-            if (permissionLauncher.allPermissionsGranted) viewModel.findAndConnect()
+            if (permissionLauncher.allPermissionsGranted) {
+
+                viewModel.findAndConnect()
+            }
             else permissionLauncher.launchMultiplePermissionRequest()
         }
 
@@ -398,7 +417,8 @@ private fun DeviceHandler(viewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "If it takes too long, ensure it is on and it is in the general list of supported devises.",
+                    "If it takes too long, ensure that your printer and bluetooth on your device" +
+                            "are turned on. However, maybe your device is not supported at all.",
                     Modifier.padding(8.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
@@ -408,8 +428,24 @@ private fun DeviceHandler(viewModel: MainViewModel) {
     }
 }
 
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 @Composable
-private fun pickImageByUser(
+private fun bluetoothEnablerByUser(context: Context): () -> Unit {
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val bt = context.getSystemService(BluetoothManager::class.java)?.adapter
+        if (bt?.isEnabled != true) {
+            Toast.makeText(context, "Failed to enable bluetooth.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    return {
+        launcher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+    }
+}
+
+@Composable
+private fun imagePickerByUser(
     applyToImage: (Bitmap) -> Unit
 ): () -> Unit {
 
