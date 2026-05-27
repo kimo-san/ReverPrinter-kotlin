@@ -69,7 +69,7 @@ class PreviewGenerator(val converter: BitmapConverter) {
             imageBitmap,
             BitmapSettings(
                 width = deviceGetter().capabilities.printWidth,
-                colorModel = ColorModel.GREY_4BPP,
+                colorModel = ColorModel.GREY_4,
                 dither = printConfig.ditherImage
             )
         ) { modified, viewable ->

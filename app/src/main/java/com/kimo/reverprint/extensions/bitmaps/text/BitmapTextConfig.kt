@@ -1,7 +1,7 @@
 package com.kimo.reverprint.extensions.bitmaps.text
 
-import com.kimo.reverprint.tools.fonts.ColorSettings
-import com.kimo.reverprint.tools.fonts.Font
+import com.kimo.reverprint.tools.font.ColorSettings
+import com.kimo.reverprint.tools.font.Font
 
 data class BitmapTextConfig (
     val width: Int,

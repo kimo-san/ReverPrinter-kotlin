@@ -1,13 +1,10 @@
-package com.kimo.reverprint.images
+package com.kimo.reverprint
 
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.kimo.reverprint.ForBitmapTests
-import com.kimo.reverprint.ForFontTests
 import com.kimo.reverprint.extensions.bitmaps.text.BitmapTextConfig
 import com.kimo.reverprint.extensions.bitmaps.text.TextOnBitmapGeneratorImpl
-import com.kimo.reverprint.getContext
-import com.kimo.reverprint.tools.fonts.ColorSettings
+import com.kimo.reverprint.tools.font.ColorSettings
 import com.kimo.reverprint.tools.graphics.Color
 import com.kimo.reverprint.tools.graphics.Monochrome
 import kotlinx.coroutines.runBlocking

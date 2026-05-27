@@ -23,7 +23,8 @@ class AndroidBitmapCreator: BitmapCreator {
     }
 
     override fun canApply(config: BitmapConfig): Boolean {
-        return config.height != null
+        return config.height != null &&
+                config.storage != StorageType.FILE
     }
 
 }
@@ -39,7 +40,7 @@ class AndroidPixels(
         get() = bitmap.height
     override var colorModel: ColorModel = initialColorModel
     override val storageType: StorageType
-        get() = StorageType.RAM
+        get() = StorageType.NATIVE
 
     override fun getIntColorForPixel(x: Int, y: Int): Int {
         return bitmap[x, y]

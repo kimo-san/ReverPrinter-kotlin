@@ -1,6 +1,6 @@
 package com.kimo.reverprint.domain.images
 
-class BitmapSettings(
+data class BitmapSettings(
     val dither: Boolean = false,
     val width: Int? = null,
     val height: Int? = null,

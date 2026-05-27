@@ -24,15 +24,15 @@ interface DeviceProtocol {
     enum class Mode { GREY_IMG, MONO_IMG }
     enum class Quality { One, Two, Three, Four, Five }
 
-    fun parseReceivedMessage(message: ByteArray): DeviceAnswer?
-    sealed interface DeviceAnswer {
-        interface State: DeviceAnswer {
+    fun parseReceivedMessage(message: ByteArray): Answer?
+    sealed interface Answer {
+        interface State: Answer {
             fun warning(): Warning?
             fun batteryLevel(): Percents?
             enum class Warning { NO_PAPER, OPEN_CLAP, OVERHEAT, LOW_BATTERY, MAGIC_TIP, BUSY }
         }
-        interface Info: DeviceAnswer
-        interface IsFull: DeviceAnswer { val isFull: Boolean }
+        interface Info: Answer
+        interface IsOverloaded: Answer { val isOverloaded: Boolean }
     }
 }
 
@@ -72,7 +72,7 @@ private class FittableDeviceProtocolImpl : FittableDeviceProtocol {
         *endOfPackageSlice
     )
 
-    override fun parseReceivedMessage(message: ByteArray): DeviceProtocol.DeviceAnswer? {
+    override fun parseReceivedMessage(message: ByteArray): DeviceProtocol.Answer? {
 
         val messageType = message.withIndex().first {
             runCatching {
@@ -85,9 +85,9 @@ private class FittableDeviceProtocolImpl : FittableDeviceProtocol {
 
         return when (messageType.value) {
             0xA3.toByte() -> StateImpl(dataSlice)
-            // 01 00 10 70 FF  -> full
-            // 01 00 00 00 FF  -> not full
-            0xAE.toByte() -> IsFullImpl(dataSlice[2] == 0x10.toByte())
+            // 01 00 10 70 FF  -> device is overloaded by sent data
+            // 01 00 00 00 FF  -> device is free
+            0xAE.toByte() -> IsOverloadedImpl(dataSlice[2] == 0x10.toByte())
             0xA8.toByte() -> InfoImpl()
             else -> null
         }
@@ -232,26 +232,29 @@ private class FittableDeviceProtocolImpl : FittableDeviceProtocol {
             0xfa, 0xfd, 0xf4, 0xf3)
     }
 
-    private inner class InfoImpl: DeviceProtocol.DeviceAnswer.Info
-    private inner class IsFullImpl(override val isFull: Boolean) : DeviceProtocol.DeviceAnswer.IsFull
-    private inner class StateImpl(val data: ByteArray): DeviceProtocol.DeviceAnswer.State {
-        override fun warning(): DeviceProtocol.DeviceAnswer.State.Warning? = when (data[2].toInt() and 0xff) {
-            0x01 -> DeviceProtocol.DeviceAnswer.State.Warning.NO_PAPER
-            0x02 -> DeviceProtocol.DeviceAnswer.State.Warning.OPEN_CLAP
-            0x04 -> DeviceProtocol.DeviceAnswer.State.Warning.OVERHEAT
-            0x08 -> DeviceProtocol.DeviceAnswer.State.Warning.LOW_BATTERY
-            0x10 -> DeviceProtocol.DeviceAnswer.State.Warning.MAGIC_TIP
-            0x80 -> DeviceProtocol.DeviceAnswer.State.Warning.BUSY
+    private inner class InfoImpl: DeviceProtocol.Answer.Info
+    private inner class IsOverloadedImpl(override val isOverloaded: Boolean) : DeviceProtocol.Answer.IsOverloaded
+    private inner class StateImpl(val data: ByteArray): DeviceProtocol.Answer.State {
+        override fun warning(): DeviceProtocol.Answer.State.Warning? = when (data[2].toInt() and 0xff) {
+            0x01 -> DeviceProtocol.Answer.State.Warning.NO_PAPER
+            0x02 -> DeviceProtocol.Answer.State.Warning.OPEN_CLAP
+            0x04 -> DeviceProtocol.Answer.State.Warning.OVERHEAT
+            0x08 -> DeviceProtocol.Answer.State.Warning.LOW_BATTERY
+            0x10 -> DeviceProtocol.Answer.State.Warning.MAGIC_TIP
+            0x80 -> DeviceProtocol.Answer.State.Warning.BUSY
             else -> null
         }
         override fun batteryLevel(): Percents? {
             return when (device.showElectricityModel) {
                 1 -> {
 
-                    // Хекс-число 23 должно читаться буквально как 23, а не переводиться в
-                    // децимальное значение 35 (чему хекс-число 23 фактически равно).
-                    // Далее от полученного числа в диапазоне от 23 до 28 отнимается 22, что и
-                    // есть реальным уровнем аккумулятора.
+                    // Уровень заряда считаются уровни от 1 до 6, где 6 означает полностью
+                    // заряженное устройство.
+                    // Пример исчисления из байтового ответа устройства:
+                    // Хекс-число 0х23 должно читаться буквально как 23, а не переводиться в
+                    // децимальное значение 35 (чему хекс-число 0х23 фактически равно).
+                    // Далее, от полученного числа в диапазоне от 23 до 28 отнимается 22, что и
+                    // есть реальным уровнем заряда аккумулятора.
 
                     val raw = data[4].toHexString().toInt()
                     val level = (raw - 22).coerceIn(0, 6)

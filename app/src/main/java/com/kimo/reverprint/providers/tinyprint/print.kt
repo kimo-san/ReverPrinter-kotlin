@@ -41,7 +41,7 @@ class TinyprintPrinter(
         bitmap: ImagePixels
     ) = coroutineScope {
 
-        require(bitmap.model == ColorModel.GREY_4BPP)
+        require(bitmap.model == ColorModel.GREY_4)
         sender.send(protocol.setMode(DeviceProtocol.Mode.GREY_IMG))
         sender.send(protocol.setQuality(DeviceProtocol.Quality.Five))
         sender.send(protocol.setEnergy(1))

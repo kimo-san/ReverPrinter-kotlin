@@ -8,9 +8,9 @@ import com.kimo.reverprint.domain.images.ImagePixels
 import com.kimo.reverprint.tools.graphics.Argb8
 import com.kimo.reverprint.extensions.bitmaps.asDomainImmutable
 import com.kimo.reverprint.extensions.bitmaps.from
-import com.kimo.reverprint.tools.fonts.Font
-import com.kimo.reverprint.tools.fonts.FontParameters
-import com.kimo.reverprint.tools.fonts.Glyph
+import com.kimo.reverprint.tools.font.Font
+import com.kimo.reverprint.tools.font.FontParameters
+import com.kimo.reverprint.tools.font.Glyph
 import com.kimo.reverprint.tools.graphics.BitmapConfig
 import com.kimo.reverprint.tools.graphics.BitmapCreator
 import com.kimo.reverprint.tools.graphics.ColorModel
@@ -21,10 +21,6 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 
 object ForBitmapTests {
-
-    fun ramOnlyCreator(): BitmapCreator {
-        return BitmapFabric(RamBitmapCreator())
-    }
 
     fun bitmapCreator(block: () -> File): BitmapCreator {
         return BitmapFabric(
